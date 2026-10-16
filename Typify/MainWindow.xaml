@@ -7,10 +7,23 @@
         mc:Ignorable="d"
         Title="Typify" Height="450" Width="800">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Padding="10" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="True">
+                <Button x:Name="ExportButton" Content="Typst-Datei zu PDF…" Padding="12,6" Click="ExportPdf_Click" />
+                <TextBlock Text="Typst nach PDF" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#526071" />
+            </DockPanel>
+        </Border>
         <controls:TypifyTextbox x:Name="Editor"
+                                Grid.Row="1"
                                 Margin="12"
                                 ShowBorder="True"
                                 IsHorizontalScrollEnabled="True"
                                 Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
+        <TextBlock x:Name="StatusText" Grid.Row="2" Margin="12,0,12,10" Foreground="#526071" Text="Bereit" />
     </Grid>
 </Window>
