@@ -1,0 +1,27 @@
+# Visual Studio user and workspace files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output for the Markify and MarkifyTextBox projects
+**/bin/
+**/obj/
+
+# NuGet packages and generated archives
+packages/
+*.nupkg
+*.snupkg
+
+# Test and publish output
+TestResults/
+artifacts/
+publish/
+
+# Optional IDE extensions
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+.dotnet-cli/
