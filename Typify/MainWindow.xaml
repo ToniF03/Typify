@@ -5,25 +5,72 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:Typify.TextBox;assembly=TypifyTextbox"
         mc:Ignorable="d"
-        Title="Typify" Height="450" Width="800">
+        Title="Typify" Height="820" Width="1320"
+        Loaded="MainWindow_Loaded" Closed="MainWindow_Closed">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+
         <Border Grid.Row="0" Padding="10" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="True">
-                <Button x:Name="ExportButton" Content="Typst-Datei zu PDF…" Padding="12,6" Click="ExportPdf_Click" />
-                <TextBlock Text="Typst nach PDF" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#526071" />
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="ImportDirectoryButton" Content="Importordner wählen…" Padding="12,6"
+                            ToolTip="Wähle eine Typst-Datei aus dem Projekt. Ihr Ordner wird als Basis für relative #import- und #include-Pfade verwendet; der Editorinhalt bleibt erhalten."
+                            Click="ChooseImportDirectory_Click" />
+                    <Button x:Name="ExportButton" Content="Typst-Datei zu PDF…" Padding="12,6" Margin="8,0,0,0" Click="ExportPdf_Click" />
+                    <TextBlock x:Name="ImportContextStatus" Text="Importbasis: nicht gewählt" VerticalAlignment="Center"
+                               Margin="12,0,0,0" Foreground="#526071" TextTrimming="CharacterEllipsis" MaxWidth="520"
+                               ToolTip="Relative Imports können aus dem Ordner einer ausgewählten Typst-Datei aufgelöst werden." />
+                </StackPanel>
+                <TextBlock Text="Typst-Editor" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0" Foreground="#526071" />
             </DockPanel>
         </Border>
-        <controls:TypifyTextbox x:Name="Editor"
-                                Grid.Row="1"
-                                Margin="12"
-                                ShowBorder="True"
-                                IsHorizontalScrollEnabled="True"
-                                Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
+
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" Margin="0,0,8,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Typst-Quelle" FontWeight="SemiBold" Foreground="#263241" Margin="2,0,0,8" />
+                <controls:TypifyTextbox x:Name="Editor"
+                                        Grid.Row="1"
+                                        ShowBorder="True"
+                                        IsHorizontalScrollEnabled="True"
+                                        Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
+            </Grid>
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="#D1D5DB" ResizeBehavior="PreviousAndNext" />
+            <Border Grid.Column="2" Margin="8,0,0,0" Padding="12" Background="#F1F3F6" BorderBrush="#D1D5DB" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Live-Vorschau" FontWeight="SemiBold" Foreground="#263241" Margin="0,0,0,6" />
+                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Warte auf Typst-Compiler …" Foreground="#526071" Margin="0,0,0,8" />
+                    <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">
+                        <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
+                    </ScrollViewer>
+                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,8,0,0"
+                             IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas" FontSize="12" Foreground="#8F2D28" Background="#FFF5F4"
+                             BorderBrush="#E7B8B4" Visibility="Collapsed" />
+                </Grid>
+            </Border>
+        </Grid>
+
         <TextBlock x:Name="StatusText" Grid.Row="2" Margin="12,0,12,10" Foreground="#526071" Text="Bereit" />
     </Grid>
 </Window>

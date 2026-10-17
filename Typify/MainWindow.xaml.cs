@@ -4,17 +4,171 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace Typify
 {
     public partial class MainWindow : Window
     {
+        private const int PreviewDebounceMilliseconds = 50;
+        private readonly DispatcherTimer _previewTimer;
+        private CancellationTokenSource _previewCancellation;
+        private string _lastRequestedSource;
+        private string _previewSourceDirectory;
+        private int _previewVersion;
+        private bool _isClosing;
+
         public MainWindow()
         {
+            _previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(PreviewDebounceMilliseconds) };
+            _previewTimer.Tick += PreviewTimer_Tick;
             InitializeComponent();
+            Editor.TextChanged += Editor_TextChanged;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            QueuePreviewCompile();
+        }
+
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
+            _isClosing = true;
+            _previewTimer.Stop();
+            if (_previewCancellation != null) _previewCancellation.Cancel();
+        }
+
+        private void Editor_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string source = Editor.Text ?? string.Empty;
+            if (string.Equals(source, _lastRequestedSource, StringComparison.Ordinal)) return;
+            QueuePreviewCompile();
+        }
+
+        private void QueuePreviewCompile()
+        {
+            if (_isClosing) return;
+            _lastRequestedSource = Editor.Text ?? string.Empty;
+            _previewVersion++;
+            if (_previewCancellation != null) _previewCancellation.Cancel();
+            _previewTimer.Stop();
+            _previewTimer.Start();
+            PreviewStatus.Text = "Änderungen erkannt · Vorschau wird aktualisiert …";
+        }
+
+        private async void PreviewTimer_Tick(object sender, EventArgs e)
+        {
+            _previewTimer.Stop();
+            int version = _previewVersion;
+            var cancellation = new CancellationTokenSource();
+            _previewCancellation = cancellation;
+            try
+            {
+                TypstPreviewResult result = await LiveTypstPreview.CompileAsync(
+                    _lastRequestedSource, _previewSourceDirectory, cancellation.Token);
+                if (_isClosing || version != _previewVersion || result.WasCancelled) return;
+
+                if (result.ExitCode == 0 && result.Pages != null && result.Pages.Count > 0)
+                {
+                    ShowPreviewPages(result.Pages);
+                    PreviewDiagnostics.Clear();
+                    PreviewDiagnostics.Visibility = Visibility.Collapsed;
+                    PreviewStatus.Text = result.Pages.Count == 1
+                        ? "Aktuell · 1 Seite"
+                        : "Aktuell · " + result.Pages.Count + " Seiten";
+                }
+                else
+                {
+                    PreviewDiagnostics.Text = string.IsNullOrWhiteSpace(result.Diagnostics)
+                        ? "Typst hat keine Vorschauseiten ausgegeben."
+                        : result.Diagnostics;
+                    PreviewDiagnostics.Visibility = Visibility.Visible;
+                    PreviewStatus.Text = PageHost.Children.Count == 0
+                        ? "Kompilierung fehlgeschlagen"
+                        : "Kompilierungsfehler · letzte erfolgreiche Vorschau bleibt sichtbar";
+                }
+            }
+            catch (Exception exception)
+            {
+                if (_isClosing || version != _previewVersion) return;
+                PreviewDiagnostics.Text = exception.Message;
+                PreviewDiagnostics.Visibility = Visibility.Visible;
+                PreviewStatus.Text = "Vorschau konnte nicht aktualisiert werden";
+            }
+            finally
+            {
+                if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null;
+                cancellation.Dispose();
+            }
+        }
+
+        private void ShowPreviewPages(System.Collections.Generic.IList<BitmapSource> pages)
+        {
+            PageHost.Children.Clear();
+            for (int page = 0; page < pages.Count; page++)
+            {
+                var image = new Image
+                {
+                    Source = pages[page],
+                    Stretch = Stretch.Uniform,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Width = GetPreviewPageWidth()
+                };
+                var sheet = new Border
+                {
+                    Child = image,
+                    Background = Brushes.White,
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(210, 215, 223)),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(6),
+                    Margin = new Thickness(8, 4, 8, 12)
+                };
+                PageHost.Children.Add(sheet);
+            }
+            PreviewScroll.ScrollToTop();
+        }
+
+        private void PreviewScroll_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            double pageWidth = GetPreviewPageWidth();
+            foreach (Border sheet in PageHost.Children)
+            {
+                var image = sheet.Child as Image;
+                if (image != null) image.Width = pageWidth;
+            }
+        }
+
+        private double GetPreviewPageWidth()
+        {
+            double available = PreviewScroll.ViewportWidth;
+            if (double.IsNaN(available) || double.IsInfinity(available) || available <= 0)
+                available = PreviewScroll.ActualWidth;
+            return Math.Max(180, available - 36);
+        }
+
+        private void ChooseImportDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            var openDialog = new OpenFileDialog
+            {
+                Title = "Typst-Datei im Projektordner auswählen",
+                Filter = "Typst-Dateien (*.typ)|*.typ|Alle Dateien (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+            if (openDialog.ShowDialog(this) != true) return;
+
+            _previewSourceDirectory = Path.GetDirectoryName(openDialog.FileName);
+            ImportContextStatus.Text = "Importbasis: " + _previewSourceDirectory;
+            ImportContextStatus.ToolTip = _previewSourceDirectory +
+                Environment.NewLine + "Relative #import- und #include-Pfade werden aus diesem Ordner aufgelöst.";
+            QueuePreviewCompile();
         }
 
         private async void ExportPdf_Click(object sender, RoutedEventArgs e)
