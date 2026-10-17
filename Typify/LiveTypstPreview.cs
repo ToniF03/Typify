@@ -24,7 +24,7 @@ namespace Typify
         private const int PreviewPpi = 72;
 
         internal static async Task<TypstPreviewResult> CompileAsync(
-            string source, string sourceDirectory, CancellationToken cancellationToken)
+            string source, string workingDirectory, string sourceDirectory, CancellationToken cancellationToken)
         {
             string runDirectory = Path.Combine(Path.GetTempPath(), "Typify", "Preview-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(runDirectory);
@@ -32,10 +32,16 @@ namespace Typify
 
             try
             {
-                string inputDirectory = string.IsNullOrWhiteSpace(sourceDirectory)
+                string rootDirectory = string.IsNullOrWhiteSpace(workingDirectory)
                     ? runDirectory
+                    : Path.GetFullPath(workingDirectory);
+                if (!Directory.Exists(rootDirectory))
+                    throw new DirectoryNotFoundException("Working directory not found: " + rootDirectory);
+                string inputDirectory = string.IsNullOrWhiteSpace(sourceDirectory)
+                    ? rootDirectory
                     : Path.GetFullPath(sourceDirectory);
-                Directory.CreateDirectory(inputDirectory);
+                if (!Directory.Exists(inputDirectory))
+                    throw new DirectoryNotFoundException("Source directory not found: " + inputDirectory);
                 inputPath = Path.Combine(inputDirectory, "TypifyPreview-" + Guid.NewGuid().ToString("N") + ".typ");
                 string outputPattern = Path.Combine(runDirectory, "page-{p}-of-{t}.png");
                 File.WriteAllText(inputPath, source ?? string.Empty, new UTF8Encoding(false));
@@ -43,9 +49,10 @@ namespace Typify
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "typst",
-                    Arguments = "compile --format png --ppi " + PreviewPpi + " --diagnostic-format short " +
+                    Arguments = "compile --root " + QuoteArgument(rootDirectory) +
+                        " --format png --ppi " + PreviewPpi + " --diagnostic-format short " +
                         QuoteArgument(inputPath) + " " + QuoteArgument(outputPattern),
-                    WorkingDirectory = inputDirectory,
+                    WorkingDirectory = rootDirectory,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
@@ -55,7 +62,7 @@ namespace Typify
                 using (var process = new Process { StartInfo = startInfo })
                 {
                     if (!process.Start())
-                        throw new InvalidOperationException("Der Typst-Compiler konnte nicht gestartet werden.");
+                        throw new InvalidOperationException("Could not start the Typst compiler.");
 
                     Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
                     Task<string> errorTask = process.StandardError.ReadToEndAsync();
@@ -97,7 +104,7 @@ namespace Typify
                 return new TypstPreviewResult
                 {
                     ExitCode = 127,
-                    Diagnostics = "Der Typst-Compiler wurde nicht gefunden. Installiere Typst und stelle sicher, dass typst.exe im PATH liegt." +
+                    Diagnostics = "The Typst compiler was not found. Install Typst and make sure typst.exe is available on PATH." +
                         Environment.NewLine + exception.Message,
                     Pages = new List<BitmapSource>()
                 };

@@ -6,50 +6,289 @@
         xmlns:controls="clr-namespace:Typify.TextBox;assembly=TypifyTextbox"
         mc:Ignorable="d"
         Title="Typify" Height="820" Width="1320"
+        MinHeight="700" MinWidth="1120"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI" FontSize="13"
         Loaded="MainWindow_Loaded" Closed="MainWindow_Closed">
+    <Window.Resources>
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F4F6F9" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SidebarBrush" Color="#F8F9FB" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#E1E5EB" />
+        <SolidColorBrush x:Key="TextBrush" Color="#202938" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#687386" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#4F75D2" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E64BD" />
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="HoverBrush" Color="#F0F3F8" />
+        <SolidColorBrush x:Key="SelectedBrush" Color="#E8EEF9" />
+        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FBFCFE" />
+        <SolidColorBrush x:Key="EditorTextBrush" Color="#273142" />
+        <SolidColorBrush x:Key="DiagnosticBackgroundBrush" Color="#FFF2F1" />
+        <SolidColorBrush x:Key="DiagnosticTextBrush" Color="#9B3F38" />
+        <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#D7DCE4" />
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter TargetName="ButtonChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PrimaryChrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PrimaryChrome" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+                                <Setter TargetName="PrimaryChrome" Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PrimaryChrome" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="PrimaryChrome" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="TextBoxChrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="TextBoxChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TreeView">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+
+        <Style TargetType="TreeViewItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="2,1" />
+            <Setter Property="Focusable" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ToggleButton x:Name="Expander" Grid.Row="0" Grid.Column="0" Width="16" Height="24"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                        Focusable="False" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource MutedTextBrush}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                            <TextBlock x:Name="Chevron" Text="›" FontSize="18" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" Margin="0,-2,0,0" Foreground="{TemplateBinding Foreground}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="Text" Value="⌄" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Border x:Name="HeaderBorder" Grid.Row="0" Grid.Column="1" CornerRadius="5" Padding="{TemplateBinding Padding}"
+                                    Background="Transparent" SnapsToDevicePixels="True">
+                                <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="Stretch"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Grid.Column="1" Margin="2,0,0,0" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
+                            </Trigger>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource SelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                                <Setter Property="Opacity" Value="0.7" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="64" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="32" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Padding="10" BorderBrush="#D1D5DB" BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="ImportDirectoryButton" Content="Importordner wählen…" Padding="12,6"
-                            ToolTip="Wähle eine Typst-Datei aus dem Projekt. Ihr Ordner wird als Basis für relative #import- und #include-Pfade verwendet; der Editorinhalt bleibt erhalten."
-                            Click="ChooseImportDirectory_Click" />
-                    <Button x:Name="ExportButton" Content="Typst-Datei zu PDF…" Padding="12,6" Margin="8,0,0,0" Click="ExportPdf_Click" />
-                    <TextBlock x:Name="ImportContextStatus" Text="Importbasis: nicht gewählt" VerticalAlignment="Center"
-                               Margin="12,0,0,0" Foreground="#526071" TextTrimming="CharacterEllipsis" MaxWidth="520"
-                               ToolTip="Relative Imports können aus dem Ordner einer ausgewählten Typst-Datei aufgelöst werden." />
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                        <TextBlock Text="T" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource AccentTextBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Typify" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                        <TextBlock Text="Typst workspace" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,0" />
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Typst-Editor" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0" Foreground="#526071" />
-            </DockPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="ThemeToggleButton" Margin="0,0,8,0" Click="ThemeToggleButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="ThemeIcon" Text="◐" FontSize="15" Margin="0,0,7,0" />
+                            <TextBlock x:Name="ThemeLabel" Text="Dark theme" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ExportButton" Style="{StaticResource PrimaryButtonStyle}"
+                            Content="Export PDF" Click="ExportPdf_Click" />
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="10">
+        <Grid Grid.Row="1" Margin="12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="230" MinWidth="180" />
                 <ColumnDefinition Width="6" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" MinWidth="240" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="240" />
             </Grid.ColumnDefinitions>
-            <Grid Grid.Column="0" Margin="0,0,8,0">
+
+            <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="2,1,2,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="EXPLORER" FontWeight="SemiBold" FontSize="11"
+                                   Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="↻" Padding="4,2" FontSize="14"
+                                ToolTip="Refresh explorer" Click="RefreshExplorer_Click" />
+                    </Grid>
+                    <TextBlock x:Name="ProjectTreeStatus" DockPanel.Dock="Bottom"
+                               Text="Double-click a .typ file to open it"
+                               TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedTextBrush}"
+                               Margin="2,10,2,0" />
+                    <TreeView x:Name="ProjectTree" Background="Transparent" MouseDoubleClick="ProjectTree_MouseDoubleClick" />
+                </DockPanel>
+            </Border>
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}" ResizeBehavior="PreviousAndNext" />
+
+            <Grid Grid.Column="2" Margin="8,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <TextBlock Text="Typst-Quelle" FontWeight="SemiBold" Foreground="#263241" Margin="2,0,0,8" />
-                <controls:TypifyTextbox x:Name="Editor"
-                                        Grid.Row="1"
-                                        ShowBorder="True"
+                <Grid Margin="2,0,2,9">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="SOURCE" FontWeight="SemiBold" FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="SourceDocumentLabel" Grid.Column="1" Text="Untitled.typ" FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
+                <controls:TypifyTextbox x:Name="Editor" Grid.Row="1" ShowBorder="True"
                                         IsHorizontalScrollEnabled="True"
+                                        Background="{DynamicResource EditorBackgroundBrush}"
+                                        Foreground="{DynamicResource EditorTextBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        CaretBrush="{DynamicResource TextBrush}"
                                         Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
             </Grid>
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          Background="#D1D5DB" ResizeBehavior="PreviousAndNext" />
-            <Border Grid.Column="2" Margin="8,0,0,0" Padding="12" Background="#F1F3F6" BorderBrush="#D1D5DB" BorderThickness="1">
+            <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}" ResizeBehavior="PreviousAndNext" />
+            <Border Grid.Column="4" Margin="8,0,0,0" Padding="12" Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -57,20 +296,27 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Live-Vorschau" FontWeight="SemiBold" Foreground="#263241" Margin="0,0,0,6" />
-                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Warte auf Typst-Compiler …" Foreground="#526071" Margin="0,0,0,8" />
+                    <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,7" />
+                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Waiting for Typst…"
+                               Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,10" />
                     <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">
                         <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
                     </ScrollViewer>
-                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,8,0,0"
+                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,10,0,0"
                              IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas" FontSize="12" Foreground="#8F2D28" Background="#FFF5F4"
-                             BorderBrush="#E7B8B4" Visibility="Collapsed" />
+                             FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource DiagnosticTextBrush}"
+                             Background="{DynamicResource DiagnosticBackgroundBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}" Visibility="Collapsed" />
                 </Grid>
             </Border>
         </Grid>
 
-        <TextBlock x:Name="StatusText" Grid.Row="2" Margin="12,0,12,10" Foreground="#526071" Text="Bereit" />
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource MutedTextBrush}"
+                       Text="Ready" FontSize="11" VerticalAlignment="Center" />
+        </Border>
     </Grid>
 </Window>

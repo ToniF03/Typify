@@ -20,6 +20,10 @@ namespace Typify.TextBox
             nameof(ShowBorder), typeof(bool), typeof(TypifyTextbox),
             new FrameworkPropertyMetadata(true, OnShowBorderChanged));
 
+        public static readonly DependencyProperty IsDarkThemeProperty = DependencyProperty.Register(
+            nameof(IsDarkTheme), typeof(bool), typeof(TypifyTextbox),
+            new FrameworkPropertyMetadata(false, OnThemeChanged));
+
         public static readonly DependencyProperty IsHorizontalScrollEnabledProperty = DependencyProperty.Register(
             nameof(IsHorizontalScrollEnabled), typeof(bool), typeof(TypifyTextbox),
             new FrameworkPropertyMetadata(true, OnScrollOptionsChanged));
@@ -36,9 +40,9 @@ namespace Typify.TextBox
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             FontFamily = new FontFamily("Consolas");
             FontSize = 14;
-            Foreground = Brush("#D8DEE9");
-            Background = Brush("#20242B");
-            BorderBrush = Brush("#4B5563");
+            Foreground = Brush("#273142");
+            Background = Brush("#FBFCFE");
+            BorderBrush = Brush("#E1E5EB");
             Padding = new Thickness(10);
             SpellCheck.SetIsEnabled(this, false);
 
@@ -61,6 +65,12 @@ namespace Typify.TextBox
         {
             get { return (bool)GetValue(ShowBorderProperty); }
             set { SetValue(ShowBorderProperty, value); }
+        }
+
+        public bool IsDarkTheme
+        {
+            get { return (bool)GetValue(IsDarkThemeProperty); }
+            set { SetValue(IsDarkThemeProperty, value); }
         }
 
         public bool IsHorizontalScrollEnabled
@@ -86,6 +96,11 @@ namespace Typify.TextBox
         {
             ((TypifyTextbox)dependencyObject).BorderThickness = (bool)e.NewValue
                 ? new Thickness(1) : new Thickness(0);
+        }
+
+        private static void OnThemeChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
+        {
+            ((TypifyTextbox)dependencyObject).QueueHighlight();
         }
 
         private static void OnScrollOptionsChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
@@ -168,7 +183,7 @@ namespace Typify.TextBox
                 allText.ApplyPropertyValue(TextElement.FontWeightProperty, FontWeights.Normal);
                 allText.ApplyPropertyValue(TextElement.FontStyleProperty, FontStyles.Normal);
 
-                foreach (HighlightSpan span in TypstLexer.Tokenize(source))
+                foreach (HighlightSpan span in TypstLexer.Tokenize(source, IsDarkTheme))
                 {
                     if (span.Start < 0 || span.End > source.Length || span.End <= span.Start) continue;
                     var token = new TextRange(positions[span.Start], positions[span.End]);
@@ -238,16 +253,41 @@ namespace Typify.TextBox
 
     internal static class TypstLexer
     {
-        private static readonly Brush Heading = Color("#88C0D0");
-        private static readonly Brush Marker = Color("#81A1C1");
-        private static readonly Brush Keyword = Color("#B48EAD");
-        private static readonly Brush Function = Color("#8FBCBB");
-        private static readonly Brush String = Color("#A3BE8C");
-        private static readonly Brush Number = Color("#D08770");
-        private static readonly Brush Comment = Color("#7F8C9D");
-        private static readonly Brush Math = Color("#EBCB8B");
-        private static readonly Brush Raw = Color("#A3BE8C");
-        private static readonly Brush Reference = Color("#B48EAD");
+        private sealed class HighlightPalette
+        {
+            internal readonly Brush Heading;
+            internal readonly Brush Marker;
+            internal readonly Brush Keyword;
+            internal readonly Brush Function;
+            internal readonly Brush String;
+            internal readonly Brush Number;
+            internal readonly Brush Comment;
+            internal readonly Brush Math;
+            internal readonly Brush Raw;
+            internal readonly Brush Reference;
+
+            internal HighlightPalette(string heading, string marker, string keyword, string function,
+                string text, string number, string comment, string math, string raw, string reference)
+            {
+                Heading = Color(heading);
+                Marker = Color(marker);
+                Keyword = Color(keyword);
+                Function = Color(function);
+                String = Color(text);
+                Number = Color(number);
+                Comment = Color(comment);
+                Math = Color(math);
+                Raw = Color(raw);
+                Reference = Color(reference);
+            }
+        }
+
+        private static readonly HighlightPalette LightPalette = new HighlightPalette(
+            "#0550AE", "#8250DF", "#CF222E", "#8250AE", "#0A3069",
+            "#953800", "#6E7781", "#8250DF", "#116329", "#8250DF");
+        private static readonly HighlightPalette DarkPalette = new HighlightPalette(
+            "#79C0FF", "#D2A8FF", "#FF7B72", "#D2A8FF", "#A5D6FF",
+            "#79C0FF", "#8B949E", "#FFA657", "#7EE787", "#D2A8FF");
         private static readonly HashSet<string> Keywords = new HashSet<string>(StringComparer.Ordinal)
         {
             "let", "set", "show", "if", "else", "for", "while", "break", "continue",
@@ -255,8 +295,9 @@ namespace Typify.TextBox
             "auto", "true", "false", "content", "context", "assert"
         };
 
-        internal static List<HighlightSpan> Tokenize(string source)
+        internal static List<HighlightSpan> Tokenize(string source, bool isDarkTheme)
         {
+            HighlightPalette palette = isDarkTheme ? DarkPalette : LightPalette;
             var spans = new List<HighlightSpan>();
             bool inBlockComment = false;
             bool inRawFence = false;
@@ -272,13 +313,13 @@ namespace Typify.TextBox
                 if (StartsWith(source, first, contentEnd, "```"))
                 {
                     inRawFence = !inRawFence;
-                    Add(spans, first, contentEnd, Raw, true);
+                    Add(spans, first, contentEnd, palette.Raw, true);
                     lineStart = lineEnd + 1;
                     continue;
                 }
                 if (inRawFence)
                 {
-                    Add(spans, lineStart, contentEnd, Raw);
+                    Add(spans, lineStart, contentEnd, palette.Raw);
                     lineStart = lineEnd + 1;
                     continue;
                 }
@@ -287,14 +328,14 @@ namespace Typify.TextBox
                 while (headingEnd < contentEnd && source[headingEnd] == '=') headingEnd++;
                 if (headingEnd > first && headingEnd < contentEnd && source[headingEnd] == ' ')
                 {
-                    Add(spans, first, headingEnd, Marker, true);
-                    Add(spans, headingEnd + 1, contentEnd, Heading, true);
+                    Add(spans, first, headingEnd, palette.Marker, true);
+                    Add(spans, headingEnd + 1, contentEnd, palette.Heading, true);
                     lineStart = lineEnd + 1;
                     continue;
                 }
 
                 if (first + 1 < contentEnd && (source[first] == '-' || source[first] == '+' || source[first] == '/') && source[first + 1] == ' ')
-                    Add(spans, first, first + 1, Marker, true);
+                    Add(spans, first, first + 1, palette.Marker, true);
 
                 int i = lineStart;
                 while (i < contentEnd)
@@ -302,15 +343,15 @@ namespace Typify.TextBox
                     if (inBlockComment)
                     {
                         int close = source.IndexOf("*/", i, contentEnd - i, StringComparison.Ordinal);
-                        if (close < 0) { Add(spans, i, contentEnd, Comment); i = contentEnd; }
-                        else { Add(spans, i, close + 2, Comment); i = close + 2; inBlockComment = false; }
+                        if (close < 0) { Add(spans, i, contentEnd, palette.Comment); i = contentEnd; }
+                        else { Add(spans, i, close + 2, palette.Comment); i = close + 2; inBlockComment = false; }
                         continue;
                     }
                     if (source[i] == '$' && (i == 0 || source[i - 1] != '\\'))
                     {
                         int close = FindUnescaped(source, '$', i + 1, contentEnd);
                         if (close < 0) close = contentEnd - 1;
-                        Add(spans, i, close + 1, Math, false, true);
+                        Add(spans, i, close + 1, palette.Math, false, true);
                         i = close + 1;
                         continue;
                     }
@@ -319,33 +360,33 @@ namespace Typify.TextBox
                         int delimiter = i + 2 < contentEnd && source[i + 1] == '`' && source[i + 2] == '`' ? 3 : 1;
                         int close = FindSequence(source, new string('`', delimiter), i + delimiter, contentEnd);
                         if (close < 0) close = contentEnd - delimiter;
-                        Add(spans, i, close + delimiter, Raw);
+                        Add(spans, i, close + delimiter, palette.Raw);
                         i = close + delimiter;
                         continue;
                     }
                     if (source[i] == '"' || source[i] == '\'')
                     {
                         int close = FindStringEnd(source, i, contentEnd, source[i]);
-                        Add(spans, i, close, String);
+                        Add(spans, i, close, palette.String);
                         i = close;
                         continue;
                     }
                     if (i + 1 < contentEnd && source[i] == '/' && source[i + 1] == '/')
                     {
-                        Add(spans, i, contentEnd, Comment);
+                        Add(spans, i, contentEnd, palette.Comment);
                         i = contentEnd;
                         continue;
                     }
                     if (i + 1 < contentEnd && source[i] == '/' && source[i + 1] == '*')
                     {
                         int close = source.IndexOf("*/", i + 2, contentEnd - i - 2, StringComparison.Ordinal);
-                        if (close < 0) { Add(spans, i, contentEnd, Comment); inBlockComment = true; i = contentEnd; }
-                        else { Add(spans, i, close + 2, Comment); i = close + 2; }
+                        if (close < 0) { Add(spans, i, contentEnd, palette.Comment); inBlockComment = true; i = contentEnd; }
+                        else { Add(spans, i, close + 2, palette.Comment); i = close + 2; }
                         continue;
                     }
                     if (source[i] == '#')
                     {
-                        Add(spans, i, i + 1, Marker, true);
+                        Add(spans, i, i + 1, palette.Marker, true);
                         int identifierStart = i + 1;
                         if (identifierStart < contentEnd && IsIdentifierStart(source[identifierStart]))
                         {
@@ -354,7 +395,7 @@ namespace Typify.TextBox
                             string word = source.Substring(identifierStart, end - identifierStart);
                             int next = end;
                             while (next < contentEnd && char.IsWhiteSpace(source[next])) next++;
-                            Add(spans, identifierStart, end, Keywords.Contains(word) ? Keyword : (next < contentEnd && source[next] == '(' ? Function : Keyword));
+                            Add(spans, identifierStart, end, Keywords.Contains(word) ? palette.Keyword : (next < contentEnd && source[next] == '(' ? palette.Function : palette.Keyword));
                             i = end;
                             continue;
                         }
@@ -363,7 +404,7 @@ namespace Typify.TextBox
                     {
                         int end = i + 1;
                         while (end < contentEnd && (char.IsDigit(source[end]) || source[end] == '.' || char.IsLetter(source[end]) || source[end] == '%')) end++;
-                        Add(spans, i, end, Number);
+                        Add(spans, i, end, palette.Number);
                         i = end;
                         continue;
                     }
@@ -372,19 +413,19 @@ namespace Typify.TextBox
                         int end = i + 1;
                         while (end < contentEnd && (IsIdentifierPart(source[end]) || source[end] == '-' || source[end] == ':')) end++;
                         if (source[i] == '<' && end < contentEnd && source[end] == '>') end++;
-                        Add(spans, i, end, Reference);
+                        Add(spans, i, end, palette.Reference);
                         i = end;
                         continue;
                     }
                     if (source[i] == '*' && i + 1 < contentEnd && source[i + 1] == '*')
                     {
                         int close = source.IndexOf("**", i + 2, contentEnd - i - 2, StringComparison.Ordinal);
-                        if (close >= 0) { Add(spans, i, close + 2, Heading, true); i = close + 2; continue; }
+                        if (close >= 0) { Add(spans, i, close + 2, palette.Heading, true); i = close + 2; continue; }
                     }
                     if (source[i] == '*')
                     {
                         int close = source.IndexOf('*', i + 1, contentEnd - i - 1);
-                        if (close > i + 1) { Add(spans, i, close + 1, Math, false, true); i = close + 1; continue; }
+                        if (close > i + 1) { Add(spans, i, close + 1, palette.Math, false, true); i = close + 1; continue; }
                     }
                     i++;
                 }
