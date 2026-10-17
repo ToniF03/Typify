@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:Typify.TextBox;assembly=TypifyTextbox"
+        xmlns:typify="clr-namespace:Typify"
         mc:Ignorable="d"
         Title="Typify" Height="820" Width="1320"
         MinHeight="700" MinWidth="1120"
@@ -191,6 +192,30 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabChrome" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                <Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -230,7 +255,9 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="12">
+        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="12">
+            <TabItem Header="Workspace">
+        <Grid Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="230" MinWidth="180" />
                 <ColumnDefinition Width="6" />
@@ -312,6 +339,11 @@
                 </Grid>
             </Border>
         </Grid>
+            </TabItem>
+            <TabItem Header="Git">
+                <typify:GitTabView x:Name="GitView" />
+            </TabItem>
+        </TabControl>
 
         <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">

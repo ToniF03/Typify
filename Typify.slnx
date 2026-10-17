@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Typify/Typify.csproj" Id="715e279f-e77a-49cf-bbaf-5c1526ae33e0" />
   <Project Path="TypifyTextbox/TypifyTextbox.csproj" Id="6ceca82b-7792-fd74-3f05-c4f4aa831bb6" />
+  <Project Path="Gitify.Engine/Gitify.Engine.csproj" Id="b7656e7c-a6f4-48b6-af22-3e81cb3e5718" />
   <Project Path="TypstToPdfRenderer/TypstToPdfRenderer.csproj" Id="2d7c0494-3c10-44c0-9f6e-c7b7eb9aef90" />
 </Solution>

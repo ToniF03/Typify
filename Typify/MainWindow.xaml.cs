@@ -59,11 +59,12 @@ namespace Typify
                 : applicationDirectory;
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             ApplyTheme(false);
             InitializeProjectTree();
             QueuePreviewCompile();
+            await GitView.InitializeAsync(_workingDirectory, _isDarkTheme);
         }
 
         private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
@@ -92,6 +93,7 @@ namespace Typify
             SetThemeBrush("PreviewPageBorderBrush", isDark ? "#343E4B" : "#D7DCE4");
 
             Editor.IsDarkTheme = isDark;
+            GitView.UpdateTheme(isDark);
             ThemeIcon.Text = isDark ? "☀" : "◐";
             ThemeLabel.Text = isDark ? "Light theme" : "Dark theme";
             ThemeToggleButton.ToolTip = isDark ? "Switch to light theme" : "Switch to dark theme";

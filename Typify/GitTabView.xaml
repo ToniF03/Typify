@@ -1,0 +1,326 @@
+<UserControl x:Class="Typify.GitTabView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        FontFamily="Segoe UI" FontSize="13"
+        Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextBrush}">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F7F8FA" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SidebarBrush" Color="#F8F9FB" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#E5E8ED" />
+        <SolidColorBrush x:Key="TextBrush" Color="#202938" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#687386" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#4F75D2" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E64BD" />
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="HoverBrush" Color="#F0F3F8" />
+        <SolidColorBrush x:Key="SelectedBrush" Color="#E8EEF9" />
+        <SolidColorBrush x:Key="DiffBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="DiffAddedForeground" Color="#166534" />
+        <SolidColorBrush x:Key="DiffAddedBackground" Color="#EAF6EE" />
+        <SolidColorBrush x:Key="DiffDeletedForeground" Color="#B42318" />
+        <SolidColorBrush x:Key="DiffDeletedBackground" Color="#FDECEC" />
+        <SolidColorBrush x:Key="DiffHunkForeground" Color="#175CD3" />
+        <SolidColorBrush x:Key="DiffHunkBackground" Color="#EDF4FF" />
+        <SolidColorBrush x:Key="DiffHeaderForeground" Color="#6941C6" />
+        <SolidColorBrush x:Key="DiffHeaderBackground" Color="#F4F0FF" />
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="9,6" />
+            <Setter Property="Margin" Value="1,0,3,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.5" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="AccentChrome" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="AccentChrome" Property="Background" Value="{DynamicResource AccentHoverBrush}" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="AccentChrome" Property="Opacity" Value="0.5" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource SidebarBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="8,5" />
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ItemChrome" Background="Transparent" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource HoverBrush}" /></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemChrome" Property="Background" Value="{DynamicResource SelectedBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabChrome" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                <Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /></Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /></Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,5" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid x:Name="RootLayout" Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="42" />
+            <RowDefinition Height="4" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock Text="Gitify" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Margin="2,0,18,0" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBox x:Name="RepositoryPathBox" Width="420" IsReadOnly="True" ToolTip="Repository folder" />
+                <Button Content="Open folder" Click="OpenRepository_Click" />
+                <Button Content="Initialize" Click="InitializeRepository_Click" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="Refresh" Click="Refresh_Click" VerticalAlignment="Center" />
+        </Grid>
+        <TabControl x:Name="GitTabs" Grid.Row="2" Background="Transparent">
+            <TabItem Header="Changes">
+                <Grid Margin="8,7,8,6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,6">
+                        <TextBlock x:Name="BranchSummary" Text="No repository" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <Button Content="Fetch" Click="Fetch_Click" /><Button Content="Pull" Click="Pull_Click" /><Button Content="Push" Click="Push_Click" />
+                        <Button Content="Stage" Click="Stage_Click" /><Button Content="Unstage" Click="Unstage_Click" />
+                        <Button Content="Discard" Click="Discard_Click" Margin="0" ToolTip="Discard working tree changes" />
+                    </DockPanel>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="340" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" BorderThickness="0" Background="Transparent">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="30" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                                <Border Background="Transparent" Padding="5,5"><TextBlock Text="Changed files" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" /></Border>
+                                <DataGrid x:Name="ChangesGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="{DynamicResource SurfaceBrush}"
+                                          Foreground="{DynamicResource TextBrush}" BorderThickness="0" SelectionMode="Single" SelectionChanged="ChangesGrid_SelectionChanged"
+                                          RowHeaderWidth="0" HorizontalGridLinesBrush="{DynamicResource BorderBrush}" VerticalGridLinesBrush="Transparent">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="74">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUntracked}" Value="True"><Setter Property="Foreground" Value="{DynamicResource DiffAddedForeground}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="A"><Setter Property="Foreground" Value="{DynamicResource DiffAddedForeground}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="D"><Setter Property="Foreground" Value="{DynamicResource DiffDeletedForeground}" /></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="R"><Setter Property="Foreground" Value="{DynamicResource DiffHeaderForeground}" /></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="File" Binding="{Binding DisplayPath}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+                        <Border Grid.Column="2" BorderThickness="0" Background="{DynamicResource DiffBrush}">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="30" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                                <Border Background="Transparent" Padding="5,5">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <TextBlock Text="+ added" FontSize="10" Foreground="{DynamicResource DiffAddedForeground}" Margin="6,0" />
+                                            <TextBlock Text="− removed" FontSize="10" Foreground="{DynamicResource DiffDeletedForeground}" Margin="6,0" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="DiffTitle" Text="Diff" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                                <RichTextBox x:Name="DiffViewer" Grid.Row="1" IsReadOnly="True" IsDocumentEnabled="False" VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" Background="{DynamicResource DiffBrush}"
+                                             Foreground="{DynamicResource TextBrush}" BorderThickness="0" Padding="0" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <Grid Grid.Row="2" Margin="0,7,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBox x:Name="CommitMessageBox" Height="34" VerticalContentAlignment="Center" ToolTip="Commit message" />
+                        <Button Grid.Column="1" Content="Commit" Style="{StaticResource AccentButtonStyle}" Click="Commit_Click" Margin="8,0,0,0" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="History">
+                <Grid Margin="8,7,8,6">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="390" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" BorderThickness="0" Background="Transparent">
+                        <Grid><Grid.RowDefinitions><RowDefinition Height="34" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <Border Background="Transparent" Padding="5,3">
+                                <DockPanel><Button DockPanel.Dock="Right" Content="Load older" Click="LoadOlderHistory_Click" Padding="8,3" Margin="0" /><TextBlock Text="Commits" FontWeight="SemiBold" VerticalAlignment="Center" /></DockPanel>
+                            </Border>
+                            <ListBox x:Name="HistoryList" Grid.Row="1" SelectionChanged="HistoryList_SelectionChanged">
+                                <ListBox.ItemTemplate><DataTemplate><StackPanel>
+                                    <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource MutedTextBrush}">
+                                        <Run Text="{Binding Author}" /><Run Text="  ·  " /><Run Text="{Binding Date}" />
+                                    </TextBlock>
+                                </StackPanel></DataTemplate></ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                        <WrapPanel Grid.Row="0" Margin="0,0,0,8">
+                            <Button Content="Check out commit" Click="CheckoutCommit_Click" />
+                            <Button Content="Revert commit" Click="RevertCommit_Click" />
+                            <Button Content="Restore selected file" Click="RestoreHistoricalFile_Click" />
+                        </WrapPanel>
+                        <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="190" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <ListBox x:Name="CommitFilesList" Grid.Column="0" SelectionChanged="CommitFilesList_SelectionChanged" />
+                            <RichTextBox x:Name="HistoryDiffViewer" Grid.Column="2" IsReadOnly="True" IsDocumentEnabled="False" VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" Background="{DynamicResource DiffBrush}"
+                                         Foreground="{DynamicResource TextBrush}" BorderThickness="0" Padding="0" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Branches &amp; remotes">
+                <Grid Margin="8,7,8,6">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="370" /><ColumnDefinition Width="14" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <TextBlock Text="Branches" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <ListBox x:Name="BranchesList" Grid.Row="1">
+                            <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Display}" />
+                                <TextBlock Text="{Binding Upstream}" Foreground="{DynamicResource MutedTextBrush}" Margin="8,0,0,0" />
+                            </StackPanel></DataTemplate></ListBox.ItemTemplate>
+                        </ListBox>
+                        <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                            <TextBox x:Name="NewBranchBox" Width="160" ToolTip="New branch name" />
+                            <Button Content="Create" Click="CreateBranch_Click" />
+                            <Button Content="Switch" Click="SwitchBranch_Click" />
+                            <Button Content="Delete" Click="DeleteBranch_Click" Margin="0" />
+                        </WrapPanel>
+                    </Grid>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Remotes" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBox x:Name="RemotesText" Height="122" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" />
+                        <TextBlock Text="Remote name" Foreground="{DynamicResource MutedTextBrush}" Margin="0,13,0,4" />
+                        <TextBox x:Name="RemoteNameBox" />
+                        <TextBlock Text="Remote URL" Foreground="{DynamicResource MutedTextBrush}" Margin="0,9,0,4" />
+                        <TextBox x:Name="RemoteUrlBox" />
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Content="Add remote" Click="AddRemote_Click" />
+                            <Button Content="Set URL" Click="SetRemoteUrl_Click" />
+                            <Button Content="Remove remote" Click="RemoveRemote_Click" Margin="0" />
+                        </WrapPanel>
+                        <Separator Margin="0,18,0,14" />
+                        <TextBlock Text="Clone a repository" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBlock Text="Repository URL" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4" />
+                        <TextBox x:Name="CloneUrlBox" />
+                        <TextBlock Text="Destination folder" Foreground="{DynamicResource MutedTextBrush}" Margin="0,9,0,4" />
+                        <DockPanel><Button DockPanel.Dock="Right" Content="Browse" Click="BrowseCloneDestination_Click" Margin="7,0,0,0" /><TextBox x:Name="CloneDestinationBox" /></DockPanel>
+                        <Button Content="Clone" Click="Clone_Click" HorizontalAlignment="Left" Margin="0,9,0,0" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Git command">
+                <Grid Margin="8,7,8,6">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <TextBlock Text="Run any Git subcommand in the selected repository. Arguments support single or double quotes; shell expansion is not used." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,10" />
+                    <DockPanel Grid.Row="1" Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Run in terminal" Click="RunInteractiveGitCommand_Click" Margin="8,0,0,0" />
+                        <Button DockPanel.Dock="Right" Content="Run" Click="RunGitCommand_Click" Margin="8,0,0,0" />
+                        <TextBox x:Name="GitCommandBox" Text="status" VerticalContentAlignment="Center" Height="36" KeyDown="GitCommandBox_KeyDown" />
+                    </DockPanel>
+                    <TextBox x:Name="CommandOutputText" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <DockPanel Grid.Row="3" Margin="3,3,3,0" LastChildFill="False">
+            <TextBlock x:Name="StatusText" Text="Ready" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+            <TextBlock x:Name="RepositoryStatusText" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" Text="Git" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+    </Grid>
+</UserControl>
