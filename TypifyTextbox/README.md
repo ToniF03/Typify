@@ -107,16 +107,16 @@ Palette values by category:
 
 | Category | Light | Dark |
 | --- | --- | --- |
-| Heading | `#0550AE` | `#79C0FF` |
-| Marker | `#8250DF` | `#D2A8FF` |
-| Keyword | `#CF222E` | `#FF7B72` |
-| Function-like identifier | `#8250AE` | `#D2A8FF` |
-| String | `#0A3069` | `#A5D6FF` |
-| Number | `#953800` | `#79C0FF` |
-| Comment | `#6E7781` | `#8B949E` |
-| Math / single-star emphasis | `#8250DF` | `#FFA657` |
-| Raw text | `#116329` | `#7EE787` |
-| Reference | `#8250DF` | `#D2A8FF` |
+| Heading | `#0000FF` | `#569CD6` |
+| Marker | `#AF00DB` | `#C586C0` |
+| Keyword | `#0000FF` | `#C586C0` |
+| Function-like identifier | `#795E26` | `#DCDCAA` |
+| String | `#A31515` | `#CE9178` |
+| Number | `#098658` | `#B5CEA8` |
+| Comment | `#008000` | `#6A9955` |
+| Math / single-star emphasis | `#AF00DB` | `#DCDCAA` |
+| Raw text | `#A31515` | `#CE9178` |
+| Reference | `#267F99` | `#4EC9B0` |
 
 This is intentionally not a full Typst grammar. It does not resolve identifiers, parse nested expressions, validate markup, report errors, or guarantee correct coloring for every valid/invalid source. A change in the Typst language may require lexer updates.
 
@@ -127,7 +127,7 @@ Default constructor settings are:
 - `AcceptsTab = true`.
 - Vertical scrollbar set to `Auto`; horizontal scrollbar set to `Auto` unless disabled through `IsHorizontalScrollEnabled`.
 - Consolas, 14 pt, 10 unit padding.
-- Light foreground `#273142`, background `#FBFCFE`, and border brush `#E1E5EB`.
+- Light foreground `#333333`, background `#FFFFFF`, and border brush `#E5E5E5`.
 - WPF spell checking disabled.
 
 Hosts can override ordinary inherited properties in XAML or code. `ShowBorder` controls only border thickness. To switch the editor palette, update the host's base brushes and set `IsDarkTheme` to the same theme state.
@@ -135,8 +135,9 @@ Hosts can override ordinary inherited properties in XAML or code. `ShowBorder` c
 Example theme handling:
 
 ```csharp
-editor.Foreground = isDark ? Brushes.Gainsboro : Brushes.DarkSlateGray;
-editor.Background = isDark ? new SolidColorBrush(Color.FromRgb(16, 21, 28)) : Brushes.White;
+ editor.Foreground = isDark ? new SolidColorBrush(Color.FromRgb(204, 204, 204)) : new SolidColorBrush(Color.FromRgb(51, 51, 51));
+ editor.Background = isDark ? new SolidColorBrush(Color.FromRgb(30, 30, 30)) : Brushes.White;
+ editor.BorderBrush = isDark ? new SolidColorBrush(Color.FromRgb(43, 43, 43)) : new SolidColorBrush(Color.FromRgb(229, 229, 229));
 editor.IsDarkTheme = isDark;
 ```
 

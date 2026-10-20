@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -19,23 +20,9 @@ namespace Typify
     public partial class MainWindow : Window
     {
         private const int PreviewDebounceMilliseconds = 50;
-        private const string DirectoryPlaceholderTag = "__TypifyDirectoryPlaceholder__";
-        private static readonly Geometry FolderIconGeometry = Geometry.Parse("M1,3 H6 L8,5 H15 V13 H1 Z");
-        private static readonly Geometry FileIconGeometry = Geometry.Parse("M3,1 H10 L14,5 V15 H3 Z");
-        private static readonly Geometry FileIconDetailGeometry = Geometry.Parse("M10,1 V5 H14 M5,8 H11 M5,11 H11");
-        private static readonly Brush FolderIconBrush = CreateIconBrush("#D6A354");
-        private static readonly Brush TypstIconBrush = CreateIconBrush("#428CCB");
-        private static readonly Brush PdfIconBrush = CreateIconBrush("#D75A5A");
-        private static readonly Brush ImageIconBrush = CreateIconBrush("#A875CF");
-        private static readonly Brush DataIconBrush = CreateIconBrush("#C79B39");
-        private static readonly Brush CodeIconBrush = CreateIconBrush("#4E9A65");
-        private static readonly Brush MarkupIconBrush = CreateIconBrush("#B46DB8");
-        private static readonly Brush TextIconBrush = CreateIconBrush("#5B9A9A");
-        private static readonly Brush DefaultFileIconBrush = CreateIconBrush("#8793A5");
         private readonly DispatcherTimer _previewTimer;
         private CancellationTokenSource _previewCancellation;
         private string _lastRequestedSource;
-        // Set this value to the root folder of the Typst project.
         private string _workingDirectory = GetDefaultWorkingDirectory();
         private string _currentSourceDirectory;
         private int _previewVersion;
@@ -48,6 +35,131 @@ namespace Typify
             _previewTimer.Tick += PreviewTimer_Tick;
             InitializeComponent();
             Editor.TextChanged += Editor_TextChanged;
+            KeyDown += MainWindow_KeyDown;
+            ExplorerOverlay.DockToggleRequested += ExplorerOverlay_DockToggleRequested;
+            ExplorerOverlay.CloseDockedRequested += ExplorerOverlay_CloseDockedRequested;
+            CommitOverlay.DockToggleRequested += CommitOverlay_DockToggleRequested;
+            CommitOverlay.CloseDockedRequested += CommitOverlay_CloseDockedRequested;
+        }
+
+        private void ExplorerOverlay_DockToggleRequested(object sender, EventArgs e)
+        {
+            if (ExplorerOverlay.IsDocked)
+                UndockOverlay(ExplorerOverlay, ExplorerOverlay.SetDocked);
+            else
+                DockOverlay(ExplorerOverlay, "Explorer", ExplorerOverlay.SetDocked);
+        }
+
+        private void CommitOverlay_DockToggleRequested(object sender, EventArgs e)
+        {
+            if (CommitOverlay.IsDocked)
+                UndockOverlay(CommitOverlay, CommitOverlay.SetDocked);
+            else
+                DockOverlay(CommitOverlay, "Git Changes", CommitOverlay.SetDocked);
+        }
+
+        private void ExplorerOverlay_CloseDockedRequested(object sender, EventArgs e)
+        {
+            UndockOverlay(ExplorerOverlay, ExplorerOverlay.SetDocked);
+            ExplorerOverlay.ToggleVisibility();
+        }
+
+        private void CommitOverlay_CloseDockedRequested(object sender, EventArgs e)
+        {
+            UndockOverlay(CommitOverlay, CommitOverlay.SetDocked);
+            CommitOverlay.ToggleVisibility();
+        }
+
+        private void DockOverlay(UserControl overlay, string title, Action<bool> setDocked)
+        {
+            setDocked(true);
+            OverlayHost.Children.Remove(overlay);
+
+            var tab = new TabItem { Header = title, Content = overlay };
+            dockedOverlayTabs.Items.Add(tab);
+            dockedOverlayTabs.Visibility = Visibility.Visible;
+            dockedOverlayTabs.SelectedItem = tab;
+            UpdateDockedOverlayVisibility();
+        }
+
+        private void UndockOverlay(UserControl overlay, Action<bool> setDocked)
+        {
+            TabItem tab = dockedOverlayTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item => ReferenceEquals(item.Content, overlay));
+            if (tab == null) return;
+
+            tab.Content = null;
+            dockedOverlayTabs.Items.Remove(tab);
+            if (dockedOverlayTabs.Items.Count == 0)
+                dockedOverlayTabs.Visibility = Visibility.Collapsed;
+
+            OverlayHost.Children.Add(overlay);
+            Grid.SetColumn(overlay, 1);
+            Panel.SetZIndex(overlay, 100);
+            setDocked(false);
+            UpdateDockedOverlayVisibility();
+        }
+
+        private void UpdateDockedOverlayVisibility()
+        {
+            bool hasDockedOverlays = dockedOverlayTabs.Items.Count > 0;
+            SplitterGrid.Width = new GridLength(hasDockedOverlays ? 5 : 0);
+            DockedOverlaySplitter.Visibility = hasDockedOverlays ? Visibility.Visible : Visibility.Collapsed;
+
+            dockedOverlayTabs.ApplyTemplate();
+            var headerPanel = dockedOverlayTabs.Template.FindName("HeaderPanel", dockedOverlayTabs) as TabPanel;
+            if (headerPanel != null)
+            {
+                headerPanel.Visibility = dockedOverlayTabs.Items.Count > 1
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+
+            LeftExplorerTab.Visibility = ExplorerOverlay.IsDocked ? Visibility.Collapsed : Visibility.Visible;
+            LeftGitChangesTab.Visibility = CommitOverlay.IsDocked ? Visibility.Collapsed : Visibility.Visible;
+            LeftToolBar.Visibility = LeftExplorerTab.Visibility == Visibility.Visible ||
+                                     LeftGitChangesTab.Visibility == Visibility.Visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void SelectDockedOverlay(UserControl overlay)
+        {
+            TabItem tab = dockedOverlayTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item => ReferenceEquals(item.Content, overlay));
+            if (tab != null) dockedOverlayTabs.SelectedItem = tab;
+        }
+
+        private void ActivateExplorerOverlay()
+        {
+            if (ExplorerOverlay.IsDocked)
+            {
+                SelectDockedOverlay(ExplorerOverlay);
+                ExplorerOverlay.ShowAndFocus();
+            }
+            else
+            {
+                ExplorerOverlay.ToggleVisibility();
+            }
+
+            if (!CommitOverlay.IsDocked && CommitOverlay.IsOpen)
+                CommitOverlay.ToggleVisibility();
+        }
+
+        private void ActivateCommitOverlay()
+        {
+            if (CommitOverlay.IsDocked)
+            {
+                SelectDockedOverlay(CommitOverlay);
+                CommitOverlay.ShowAndFocus();
+            }
+            else
+            {
+                CommitOverlay.ToggleVisibility();
+            }
+
+            if (!ExplorerOverlay.IsDocked && ExplorerOverlay.IsOpen)
+                ExplorerOverlay.ToggleVisibility();
         }
 
         private static string GetDefaultWorkingDirectory()
@@ -62,9 +174,84 @@ namespace Typify
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             ApplyTheme(false);
-            InitializeProjectTree();
             QueuePreviewCompile();
             await GitView.InitializeAsync(_workingDirectory, _isDarkTheme);
+            await CommitOverlay.InitializeAsync(_workingDirectory, _isDarkTheme);
+            CommitOverlay.CommitCompleted += CommitOverlay_CommitCompleted;
+            CommitOverlay.VisibilityChanged += (s, ev) => UpdateLeftTabState();
+            CommitOverlay.StatusUpdated += (s, ev) => UpdateLeftTabState();
+            GitView.RepositoryRefreshed += GitView_RepositoryRefreshed;
+            UpdateLeftTabState();
+        }
+
+        private void LeftGitChangesTab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            switch (((Border)sender).Name)
+            {
+                case "LeftGitChangesTab":
+                    ActivateCommitOverlay();
+                    UpdateLeftTabState();
+                    break;
+                case "LeftExplorerTab":
+                    ActivateExplorerOverlay();
+                    break;
+            }
+        }
+
+        private void LeftGitChangesTab_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (((Border)sender).Name == "LeftGitChangesTab")
+            {
+                if (!CommitOverlay.IsOpen)
+                    LeftGitChangesTab.SetResourceReference(Border.BackgroundProperty, "HoverBrush");
+            }
+            else if (((Border)sender).Name == "LeftExplorerTab")
+            {
+                if (!ExplorerOverlay.IsOpen)
+                    LeftExplorerTab.SetResourceReference(Border.BackgroundProperty, "HoverBrush");
+            }
+        }
+
+        private void LeftGitChangesTab_MouseLeave(object sender, MouseEventArgs e)
+        {
+            UpdateLeftTabState();
+        }
+
+        private void UpdateLeftTabState()
+        {
+            if (CommitOverlay.IsOpen)
+                LeftGitChangesTab.SetResourceReference(Border.BackgroundProperty, "SelectedBrush");
+            else
+                LeftGitChangesTab.Background = Brushes.Transparent;
+
+            int count = CommitOverlay.StagedCount;
+            LeftGitChangesBadgeText.Text = count.ToString();
+            LeftGitChangesBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private async void CommitOverlay_CommitCompleted(object sender, EventArgs e)
+        {
+            await GitView.RefreshAllAsync();
+            StatusText.Text = "Commit completed successfully.";
+            UpdateLeftTabState();
+        }
+
+        private async void GitView_RepositoryRefreshed(object sender, EventArgs e)
+        {
+            await CommitOverlay.RefreshStatusAsync();
+            UpdateLeftTabState();
+        }
+
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control &&
+                (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift &&
+                e.Key == Key.C)
+            {
+                e.Handled = true;
+                ActivateCommitOverlay();
+                UpdateLeftTabState();
+            }
         }
 
         private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
@@ -75,25 +262,28 @@ namespace Typify
 
         private void ApplyTheme(bool isDark)
         {
-            SetThemeBrush("WindowBackgroundBrush", isDark ? "#0E1117" : "#F4F6F9");
-            SetThemeBrush("SurfaceBrush", isDark ? "#151A22" : "#FFFFFF");
-            SetThemeBrush("SidebarBrush", isDark ? "#121720" : "#F8F9FB");
-            SetThemeBrush("BorderBrush", isDark ? "#2A3340" : "#E1E5EB");
-            SetThemeBrush("TextBrush", isDark ? "#E6EDF3" : "#202938");
-            SetThemeBrush("MutedTextBrush", isDark ? "#8B98A9" : "#687386");
-            SetThemeBrush("AccentBrush", isDark ? "#6EA8FE" : "#4F75D2");
-            SetThemeBrush("AccentHoverBrush", isDark ? "#5794F4" : "#3E64BD");
-            SetThemeBrush("AccentTextBrush", isDark ? "#101722" : "#FFFFFF");
-            SetThemeBrush("HoverBrush", isDark ? "#202733" : "#F0F3F8");
-            SetThemeBrush("SelectedBrush", isDark ? "#203149" : "#E8EEF9");
-            SetThemeBrush("EditorBackgroundBrush", isDark ? "#10151C" : "#FBFCFE");
-            SetThemeBrush("EditorTextBrush", isDark ? "#D8DEE9" : "#273142");
+            SetThemeBrush("WindowBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("SurfaceBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("SidebarBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("BorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
+            SetThemeBrush("TextBrush", isDark ? "#CCCCCC" : "#333333");
+            SetThemeBrush("MutedTextBrush", isDark ? "#858585" : "#616161");
+            SetThemeBrush("AccentBrush", isDark ? "#0E639C" : "#007ACC");
+            SetThemeBrush("AccentHoverBrush", isDark ? "#1177BB" : "#0062A3");
+            SetThemeBrush("AccentTextBrush", "#FFFFFF");
+            SetThemeBrush("HoverBrush", isDark ? "#2A2D2E" : "#E8E8E8");
+            SetThemeBrush("SelectedBrush", isDark ? "#094771" : "#E4E6F1");
+            SetThemeBrush("EditorBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("EditorTextBrush", isDark ? "#CCCCCC" : "#333333");
             SetThemeBrush("DiagnosticBackgroundBrush", isDark ? "#2B1B1D" : "#FFF2F1");
-            SetThemeBrush("DiagnosticTextBrush", isDark ? "#FF938A" : "#9B3F38");
-            SetThemeBrush("PreviewPageBorderBrush", isDark ? "#343E4B" : "#D7DCE4");
+            SetThemeBrush("DiagnosticTextBrush", isDark ? "#F14C4C" : "#CF222E");
+            SetThemeBrush("PreviewPageBorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
 
             Editor.IsDarkTheme = isDark;
             GitView.UpdateTheme(isDark);
+            CommitOverlay.UpdateTheme(isDark);
+            ExplorerOverlay.UpdateTheme(isDark);
+            ExplorerOverlay.SetWorkingDirectory(_workingDirectory); 
             ThemeIcon.Text = isDark ? "☀" : "◐";
             ThemeLabel.Text = isDark ? "Light theme" : "Dark theme";
             ThemeToggleButton.ToolTip = isDark ? "Switch to light theme" : "Switch to dark theme";
@@ -219,217 +409,6 @@ namespace Typify
             if (double.IsNaN(available) || double.IsInfinity(available) || available <= 0)
                 available = PreviewScroll.ActualWidth;
             return Math.Max(180, available - 36);
-        }
-
-        private void InitializeProjectTree()
-        {
-            ProjectTree.Items.Clear();
-            if (!Directory.Exists(_workingDirectory))
-            {
-                ProjectTreeStatus.Text = "Working directory not found: " + _workingDirectory;
-                return;
-            }
-
-            string rootPath = Path.GetFullPath(_workingDirectory);
-            string rootName = Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            var root = CreateDirectoryNode(rootPath, string.IsNullOrEmpty(rootName) ? rootPath : rootName);
-            root.ToolTip = rootPath;
-            ProjectTree.Items.Add(root);
-            root.IsExpanded = true;
-            ProjectTreeStatus.Text = "Double-click a .typ file to open it";
-        }
-
-        private void RefreshExplorer_Click(object sender, RoutedEventArgs e)
-        {
-            InitializeProjectTree();
-        }
-
-        private TreeViewItem CreateDirectoryNode(string path, string header)
-        {
-            var item = new TreeViewItem
-            {
-                Header = CreateExplorerHeader(header, true),
-                Tag = path,
-                ToolTip = path
-            };
-            item.Items.Add(new TreeViewItem { Header = "Loading…", Tag = DirectoryPlaceholderTag, IsEnabled = false });
-            item.Expanded += DirectoryNode_Expanded;
-            return item;
-        }
-
-        private object CreateExplorerHeader(string name, bool isDirectory)
-        {
-            var header = new Grid { VerticalAlignment = VerticalAlignment.Center };
-            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            if (isDirectory)
-            {
-                var folderIcon = new System.Windows.Shapes.Path
-                {
-                    Data = FolderIconGeometry,
-                    Fill = FolderIconBrush,
-                    Width = 16,
-                    Height = 14,
-                    Stretch = Stretch.Fill,
-                    Margin = new Thickness(1, 0, 8, 0),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                header.Children.Add(folderIcon);
-            }
-            else
-            {
-                Brush iconBrush = GetFileIconBrush(name);
-                var softBrush = (SolidColorBrush)iconBrush.Clone();
-                softBrush.Opacity = 0.14;
-                softBrush.Freeze();
-
-                var icon = new Grid
-                {
-                    Width = 16,
-                    Height = 17,
-                    Margin = new Thickness(1, 0, 8, 0),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                icon.Children.Add(new System.Windows.Shapes.Path
-                {
-                    Data = FileIconGeometry,
-                    Fill = softBrush,
-                    Stroke = iconBrush,
-                    StrokeThickness = 1.1,
-                    Stretch = Stretch.Fill
-                });
-                icon.Children.Add(new System.Windows.Shapes.Path
-                {
-                    Data = FileIconDetailGeometry,
-                    Stroke = iconBrush,
-                    StrokeThickness = 1.1,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Round,
-                    Stretch = Stretch.Fill
-                });
-                header.Children.Add(icon);
-            }
-
-            var label = new TextBlock
-            {
-                Text = name,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                FontSize = 12.5
-            };
-            Grid.SetColumn(label, 1);
-            label.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
-            header.Children.Add(label);
-            return header;
-        }
-
-        private static Brush GetFileIconBrush(string fileName)
-        {
-            string extension = Path.GetExtension(fileName).ToLowerInvariant();
-            switch (extension)
-            {
-                case ".typ": return TypstIconBrush;
-                case ".pdf": return PdfIconBrush;
-                case ".png":
-                case ".jpg":
-                case ".jpeg":
-                case ".gif":
-                case ".svg": return ImageIconBrush;
-                case ".json":
-                case ".yaml":
-                case ".yml": return DataIconBrush;
-                case ".cs":
-                case ".py":
-                case ".js":
-                case ".ts":
-                case ".cpp":
-                case ".h": return CodeIconBrush;
-                case ".xaml":
-                case ".xml": return MarkupIconBrush;
-                case ".md":
-                case ".txt": return TextIconBrush;
-                default: return DefaultFileIconBrush;
-            }
-        }
-
-        private static Brush CreateIconBrush(string color)
-        {
-            var brush = (SolidColorBrush)new BrushConverter().ConvertFromString(color);
-            brush.Freeze();
-            return brush;
-        }
-
-        private void DirectoryNode_Expanded(object sender, RoutedEventArgs e)
-        {
-            var directoryNode = sender as TreeViewItem;
-            if (directoryNode == null || directoryNode.Items.Count != 1) return;
-
-            var placeholder = directoryNode.Items[0] as TreeViewItem;
-            if (placeholder == null || !string.Equals(placeholder.Tag as string, DirectoryPlaceholderTag, StringComparison.Ordinal))
-                return;
-
-            directoryNode.Items.Clear();
-            string directoryPath = directoryNode.Tag as string;
-            try
-            {
-                foreach (string subdirectory in Directory.GetDirectories(directoryPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
-                    directoryNode.Items.Add(CreateDirectoryNode(subdirectory, Path.GetFileName(subdirectory)));
-
-                foreach (string file in Directory.GetFiles(directoryPath).OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
-                {
-                    string fileName = Path.GetFileName(file);
-                    if (fileName.StartsWith("TypifyPreview-", StringComparison.OrdinalIgnoreCase)) continue;
-                    directoryNode.Items.Add(new TreeViewItem { Header = CreateExplorerHeader(fileName, false), Tag = file, ToolTip = file });
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                directoryNode.Items.Add(new TreeViewItem { Header = "Access denied", IsEnabled = false });
-            }
-            catch (IOException)
-            {
-                directoryNode.Items.Add(new TreeViewItem { Header = "Could not read folder", IsEnabled = false });
-            }
-        }
-
-        private void ProjectTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            var selectedNode = FindTreeViewItem(e.OriginalSource as DependencyObject) ?? ProjectTree.SelectedItem as TreeViewItem;
-            string filePath = selectedNode == null ? null : selectedNode.Tag as string;
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath) ||
-                !string.Equals(Path.GetExtension(filePath), ".typ", StringComparison.OrdinalIgnoreCase))
-                return;
-
-            try
-            {
-                string source = File.ReadAllText(filePath);
-                _currentSourceDirectory = Path.GetDirectoryName(filePath);
-                bool sourceIsUnchanged = string.Equals(Editor.Text ?? string.Empty, source, StringComparison.Ordinal);
-                Editor.Text = source;
-                SourceDocumentLabel.Text = Path.GetFileName(filePath);
-                SourceDocumentLabel.ToolTip = filePath;
-                StatusText.Text = "Opened: " + filePath;
-                if (sourceIsUnchanged) QueuePreviewCompile();
-            }
-            catch (IOException exception)
-            {
-                StatusText.Text = "Could not open file";
-                PreviewDiagnostics.Text = exception.Message;
-                PreviewDiagnostics.Visibility = Visibility.Visible;
-            }
-            catch (UnauthorizedAccessException exception)
-            {
-                StatusText.Text = "Could not open file";
-                PreviewDiagnostics.Text = exception.Message;
-                PreviewDiagnostics.Visibility = Visibility.Visible;
-            }
-        }
-
-        private static TreeViewItem FindTreeViewItem(DependencyObject source)
-        {
-            while (source != null && !(source is TreeViewItem))
-                source = VisualTreeHelper.GetParent(source);
-            return source as TreeViewItem;
         }
 
         private async void ExportPdf_Click(object sender, RoutedEventArgs e)

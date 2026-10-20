@@ -40,9 +40,9 @@ namespace Typify.TextBox
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             FontFamily = new FontFamily("Consolas");
             FontSize = 14;
-            Foreground = Brush("#273142");
-            Background = Brush("#FBFCFE");
-            BorderBrush = Brush("#E1E5EB");
+            Foreground = Brush("#333333");
+            Background = Brush("#FFFFFF");
+            BorderBrush = Brush("#E5E5E5");
             Padding = new Thickness(10);
             SpellCheck.SetIsEnabled(this, false);
 
@@ -283,11 +283,11 @@ namespace Typify.TextBox
         }
 
         private static readonly HighlightPalette LightPalette = new HighlightPalette(
-            "#0550AE", "#8250DF", "#CF222E", "#8250AE", "#0A3069",
-            "#953800", "#6E7781", "#8250DF", "#116329", "#8250DF");
+            "#0000FF", "#AF00DB", "#0000FF", "#795E26", "#A31515",
+            "#098658", "#008000", "#AF00DB", "#A31515", "#267F99");
         private static readonly HighlightPalette DarkPalette = new HighlightPalette(
-            "#79C0FF", "#D2A8FF", "#FF7B72", "#D2A8FF", "#A5D6FF",
-            "#79C0FF", "#8B949E", "#FFA657", "#7EE787", "#D2A8FF");
+            "#569CD6", "#C586C0", "#C586C0", "#DCDCAA", "#CE9178",
+            "#B5CEA8", "#6A9955", "#DCDCAA", "#CE9178", "#4EC9B0");
         private static readonly HashSet<string> Keywords = new HashSet<string>(StringComparer.Ordinal)
         {
             "let", "set", "show", "if", "else", "for", "while", "break", "continue",

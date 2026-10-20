@@ -13,22 +13,22 @@
         FontFamily="Segoe UI" FontSize="13"
         Loaded="MainWindow_Loaded" Closed="MainWindow_Closed">
     <Window.Resources>
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F4F6F9" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="SidebarBrush" Color="#F8F9FB" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#E1E5EB" />
-        <SolidColorBrush x:Key="TextBrush" Color="#202938" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#687386" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#4F75D2" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E64BD" />
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#F3F3F3" />
+        <SolidColorBrush x:Key="SidebarBrush" Color="#F3F3F3" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#E5E5E5" />
+        <SolidColorBrush x:Key="TextBrush" Color="#333333" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#616161" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#007ACC" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0062A3" />
         <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="HoverBrush" Color="#F0F3F8" />
-        <SolidColorBrush x:Key="SelectedBrush" Color="#E8EEF9" />
-        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FBFCFE" />
-        <SolidColorBrush x:Key="EditorTextBrush" Color="#273142" />
+        <SolidColorBrush x:Key="HoverBrush" Color="#E8E8E8" />
+        <SolidColorBrush x:Key="SelectedBrush" Color="#E4E6F1" />
+        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="EditorTextBrush" Color="#333333" />
         <SolidColorBrush x:Key="DiagnosticBackgroundBrush" Color="#FFF2F1" />
-        <SolidColorBrush x:Key="DiagnosticTextBrush" Color="#9B3F38" />
-        <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#D7DCE4" />
+        <SolidColorBrush x:Key="DiagnosticTextBrush" Color="#CF222E" />
+        <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#E5E5E5" />
 
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -210,7 +210,9 @@
                                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                                 <Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -243,6 +245,7 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+
                     <Button x:Name="ThemeToggleButton" Margin="0,0,8,0" Click="ThemeToggleButton_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock x:Name="ThemeIcon" Text="◐" FontSize="15" Margin="0,0,7,0" />
@@ -255,95 +258,150 @@
             </Grid>
         </Border>
 
-        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="12">
-            <TabItem Header="Workspace">
-        <Grid Margin="8">
+        <Grid x:Name="OverlayHost" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="230" MinWidth="180" />
-                <ColumnDefinition Width="6" />
-                <ColumnDefinition Width="*" MinWidth="240" />
-                <ColumnDefinition Width="6" />
-                <ColumnDefinition Width="*" MinWidth="240" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10">
-                <DockPanel>
-                    <Grid DockPanel.Dock="Top" Margin="2,1,2,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="EXPLORER" FontWeight="SemiBold" FontSize="11"
-                                   Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Content="↻" Padding="4,2" FontSize="14"
-                                ToolTip="Refresh explorer" Click="RefreshExplorer_Click" />
-                    </Grid>
-                    <TextBlock x:Name="ProjectTreeStatus" DockPanel.Dock="Bottom"
-                               Text="Double-click a .typ file to open it"
-                               TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MutedTextBrush}"
-                               Margin="2,10,2,0" />
-                    <TreeView x:Name="ProjectTree" Background="Transparent" MouseDoubleClick="ProjectTree_MouseDoubleClick" />
-                </DockPanel>
-            </Border>
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          Background="{DynamicResource BorderBrush}" ResizeBehavior="PreviousAndNext" />
+            <!-- LEFT VERTICAL TOOL TAB STRIP (Visual Studio style) -->
+            <Border x:Name="LeftToolBar" Grid.Column="0" Background="{DynamicResource SidebarBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Width="26">
+                <StackPanel VerticalAlignment="Top" Margin="0,10,0,0">
+                    <!-- Explorer Tab Button -->
+                    <Border x:Name="LeftExplorerTab" CornerRadius="3" Margin="2,0,2,0" Padding="3,10"
+        Cursor="Hand" ToolTip="Explorer"
+        MouseEnter="LeftGitChangesTab_MouseEnter"
+                            MouseLeftButtonDown="LeftGitChangesTab_MouseLeftButtonDown"
+        Background="Transparent">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="Explorer" FontSize="11" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}">
+                                <TextBlock.LayoutTransform>
+                                    <RotateTransform Angle="90" />
+                                </TextBlock.LayoutTransform>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
 
-            <Grid Grid.Column="2" Margin="8,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Margin="2,0,2,9">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="SOURCE" FontWeight="SemiBold" FontSize="11"
-                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <TextBlock x:Name="SourceDocumentLabel" Grid.Column="1" Text="Untitled.typ" FontSize="11"
-                               Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                </Grid>
-                <controls:TypifyTextbox x:Name="Editor" Grid.Row="1" ShowBorder="True"
+
+                    <!-- Git Changes Tab Button -->
+                    <Border x:Name="LeftGitChangesTab" CornerRadius="3" Margin="2,0,2,0" Padding="3,10"
+        Cursor="Hand" ToolTip="Git Changes (Ctrl+Shift+C)"
+        Background="Transparent"
+        MouseLeftButtonDown="LeftGitChangesTab_MouseLeftButtonDown"
+        MouseEnter="LeftGitChangesTab_MouseEnter"
+        MouseLeave="LeftGitChangesTab_MouseLeave">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="Git Changes" FontSize="11" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}">
+                                <TextBlock.LayoutTransform>
+                                    <RotateTransform Angle="90" />
+                                </TextBlock.LayoutTransform>
+                            </TextBlock>
+                            <!-- Badge for staged changes count -->
+                            <Border x:Name="LeftGitChangesBadge" Background="{DynamicResource AccentBrush}" CornerRadius="6"
+                Padding="4,1" Margin="0,8,0,0" HorizontalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock x:Name="LeftGitChangesBadgeText" Text="0" FontSize="9" FontWeight="Bold"
+                       Foreground="{DynamicResource AccentTextBrush}" HorizontalAlignment="Center" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Grid Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition x:Name="SplitterGrid" Width="0" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TabControl x:Name="dockedOverlayTabs" Grid.Column="0" Visibility="Collapsed"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <TabControl.Template>
+                        <ControlTemplate TargetType="{x:Type TabControl}">
+                            <Grid ClipToBounds="True" KeyboardNavigation.TabNavigation="Local">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TabPanel x:Name="HeaderPanel" Grid.Row="0" IsItemsHost="True"
+                                          Background="{DynamicResource SidebarBrush}" />
+                                <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1,0,1,1" Background="{DynamicResource SurfaceBrush}">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </TabControl.Template>
+                </TabControl>
+                <GridSplitter x:Name="DockedOverlaySplitter" Grid.Column="1" Width="5"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                              Background="Transparent" Cursor="SizeWE"
+                              ResizeBehavior="PreviousAndNext" Visibility="Collapsed" />
+
+                <TabControl x:Name="MainTabs" Grid.Column="2" Margin="10,6,10,6">
+                    <TabItem Header="Workspace">
+                        <Grid Margin="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="240" />
+                                <ColumnDefinition Width="4" />
+                                <ColumnDefinition Width="*" MinWidth="240" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0" Margin="8,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <controls:TypifyTextbox x:Name="Editor" Grid.Row="1" ShowBorder="True"
                                         IsHorizontalScrollEnabled="True"
                                         Background="{DynamicResource EditorBackgroundBrush}"
                                         Foreground="{DynamicResource EditorTextBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         CaretBrush="{DynamicResource TextBrush}"
                                         Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
-            </Grid>
-            <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          Background="{DynamicResource BorderBrush}" ResizeBehavior="PreviousAndNext" />
-            <Border Grid.Column="4" Margin="8,0,0,0" Padding="12" Background="{DynamicResource SurfaceBrush}"
+                            </Grid>
+                            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="Transparent" ResizeBehavior="PreviousAndNext" />
+                            <Border Grid.Column="2" Margin="8,0,0,0" Padding="12" Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
                                Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,7" />
-                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Waiting for Typst…"
+                                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Waiting for Typst…"
                                Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,10" />
-                    <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                    <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">
-                        <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
-                    </ScrollViewer>
-                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,10,0,0"
+                                        <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
+                                    </ScrollViewer>
+                                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,10,0,0"
                              IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                              FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource DiagnosticTextBrush}"
                              Background="{DynamicResource DiagnosticBackgroundBrush}"
                              BorderBrush="{DynamicResource BorderBrush}" Visibility="Collapsed" />
-                </Grid>
-            </Border>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Git">
+                        <typify:GitTabView x:Name="GitView" />
+                    </TabItem>
+                </TabControl>
+
+            </Grid>
+            <!-- Overlapping Git Changes Window (Docked on the left, overlapping MainTabs) -->
+            <typify:GitCommitOverlay x:Name="CommitOverlay" Grid.Column="1" Panel.ZIndex="100"
+                                 HorizontalAlignment="Left" VerticalAlignment="Stretch" Visibility="Collapsed" />
+            <typify:ExplorerOverlay x:Name="ExplorerOverlay" Grid.Column="1" Panel.ZIndex="100"
+                                   HorizontalAlignment="Left" VerticalAlignment="Stretch" Visibility="Collapsed" />
         </Grid>
-            </TabItem>
-            <TabItem Header="Git">
-                <typify:GitTabView x:Name="GitView" />
-            </TabItem>
-        </TabControl>
 
         <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">

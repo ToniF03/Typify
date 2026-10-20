@@ -10,6 +10,7 @@
 - [Editing and live preview](#editing-and-live-preview)
 - [PDF export](#pdf-export)
 - [Git tab](#git-tab)
+- [Overlapping Commit tab (COMMIT_EDITMSG)](#overlapping-commit-tab-commit_editmsg)
 - [Themes and layout](#themes-and-layout)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -23,6 +24,8 @@
 | `LiveTypstPreview.cs` | Creates temporary Typst source/output paths, runs Typst to PNG, loads page images, collects diagnostics, cancels superseded work, and removes temporary files. |
 | `GitTabView.xaml` | Git tab interface and its Changes, History, Branches & remotes, and Git command views. |
 | `GitTabView.xaml.cs` | Repository discovery, Git tab actions, command output, branch/history refresh, and diff coloring. |
+| `GitCommitOverlay.xaml` | Overlapping VS Code-style Commit tab and window for editing commit messages, options, and trailers. |
+| `GitCommitOverlay.xaml.cs` | Logic for commit subject/body editing, character limits, amending HEAD commits, co-author templates, sign-off, and commit actions. |
 | `App.xaml`, `App.xaml.cs`, `App.config` | WPF application bootstrap and .NET Framework 4.7.2 runtime declaration. |
 
 Project references:
@@ -167,6 +170,21 @@ The command input accepts single- or double-quoted arguments, for example `log -
 Background commands close standard input and set `GIT_TERMINAL_PROMPT=0`; GUI commands cannot answer terminal credential prompts. Configure Git credentials before using fetch/pull/push/clone in background mode, or use **Run in terminal** for interactive commands.
 
 After successful button actions and captured **Run** commands the UI refreshes repository state. A command launched with **Run in terminal** is not monitored after startup; use **Refresh** when it finishes. Captured process output is kept in the Git command output area, while status messages summarize the latest action.
+
+## Overlapping Commit tab (`COMMIT_EDITMSG`)
+
+Typify includes a dedicated, lightweight commit editor window that is displayed directly inside `MainWindow` as an overlapping tab card (`GitCommitOverlay.xaml`). It allows editing commit messages and metadata in place without navigating away from the Typst workspace.
+
+- **Toggle & Shortcuts**: Open or toggle the commit tab anytime using the **Commit** button in the top toolbar or the keyboard shortcut `Ctrl+Shift+C`. When minimized, a compact overlapping tab handle (`[ ⑂ COMMIT_EDITMSG (N) ▲ ]`) docks at the bottom-right and can be clicked to restore the editor.
+- **Draggable Window**: Drag the VS Code-style tab header to move the overlay anywhere over the workspace; double-click the header to reset its position.
+- **Subject / Summary**: Single-line commit message input with dynamic character counter (`0/50`). Color coding warns when exceeding standard Git conventions (amber for 51–72 chars, red beyond 72 chars).
+- **Extended Body / Description**: Multiline body editor supporting detailed bullet points and rationales.
+- **Co-Author Helper**: A `+ Co-author` button quickly appends standard `Co-authored-by: Name <name@example.com>` trailers.
+- **Amend Last Commit**: Check **Amend last commit** to automatically populate the subject and body with the message from `HEAD` via `git log -1 --pretty=%B`, and commit using `git commit --amend`.
+- **Sign-Off**: Check **Sign-off (--signoff)** to include standard GPG/DCO sign-off trailers.
+- **Staged Changes Summary**: Displays staged file counts, status badges (`M`, `A`, `D`, `R`), and individual unstage buttons (`−`). If no files are staged, it offers a quick **+ Stage All** button and prompts to automatically stage all working changes upon committing.
+- **Commit & Push**: Supports both local commit (`✓ Commit` or `Ctrl+Enter`) and combined `Commit & Push`.
+- **Theme Reactivity**: Automatically matches the active VS Code theme (Dark+ and Light+) alongside the rest of the application.
 
 ## Themes and layout
 

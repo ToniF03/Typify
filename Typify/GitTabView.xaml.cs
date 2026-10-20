@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,17 +13,42 @@ using Gitify.Engine;
 
 namespace Typify
 {
+    public class VsCodeChangeItem
+    {
+        public string Path { get; set; }
+        public string OriginalPath { get; set; }
+        public string FileName { get; set; }
+        public string DirectoryDisplay { get; set; }
+        public string StatusLetter { get; set; }
+        public string StatusTooltip { get; set; }
+        public bool IsStaged { get; set; }
+        public bool IsUntracked { get; set; }
+        public GitFileChange SourceChange { get; set; }
+    }
+
     public partial class GitTabView : UserControl
     {
         private GitRepositoryService _repository;
         private bool _isDarkTheme;
         private bool _isBusy;
         private bool _isRefreshing;
+        private bool _isSyncingSelection;
+        private bool _isStagedExpanded = true;
+        private bool _isUnstagedExpanded = true;
         private int _diffRequestId;
         private int _historyRequestId;
         private int _historyLimit = 300;
         private string _diffSource = string.Empty;
         private string _historyDiffSource = string.Empty;
+        private VsCodeChangeItem _currentSelectedChange;
+        private List<VsCodeChangeItem> _stagedItems = new List<VsCodeChangeItem>();
+        private List<VsCodeChangeItem> _unstagedItems = new List<VsCodeChangeItem>();
+        private IList<GitBranch> _branches = new List<GitBranch>();
+        private string _currentBranchName = string.Empty;
+        private int _aheadCount;
+        private int _behindCount;
+
+        public event EventHandler RepositoryRefreshed;
 
         public GitTabView()
         {
@@ -49,26 +76,68 @@ namespace Typify
 
         private void ApplyTheme(bool isDark)
         {
-            SetThemeBrush("WindowBackgroundBrush", isDark ? "#0E1117" : "#F4F6F9");
-            SetThemeBrush("SurfaceBrush", isDark ? "#151A22" : "#FFFFFF");
-            SetThemeBrush("SidebarBrush", isDark ? "#121720" : "#F8F9FB");
-            SetThemeBrush("BorderBrush", isDark ? "#2A3340" : "#E1E5EB");
-            SetThemeBrush("TextBrush", isDark ? "#E6EDF3" : "#202938");
-            SetThemeBrush("MutedTextBrush", isDark ? "#8B98A9" : "#687386");
-            SetThemeBrush("AccentBrush", isDark ? "#6EA8FE" : "#4F75D2");
-            SetThemeBrush("AccentHoverBrush", isDark ? "#5794F4" : "#3E64BD");
-            SetThemeBrush("AccentTextBrush", isDark ? "#101722" : "#FFFFFF");
-            SetThemeBrush("HoverBrush", isDark ? "#202733" : "#F0F3F8");
-            SetThemeBrush("SelectedBrush", isDark ? "#203149" : "#E8EEF9");
-            SetThemeBrush("DiffBrush", isDark ? "#10151C" : "#FBFCFE");
-            SetThemeBrush("DiffAddedForeground", isDark ? "#7EE787" : "#1A7F37");
-            SetThemeBrush("DiffAddedBackground", isDark ? "#132B1E" : "#EAF6EE");
-            SetThemeBrush("DiffDeletedForeground", isDark ? "#FFA198" : "#CF222E");
-            SetThemeBrush("DiffDeletedBackground", isDark ? "#341A1C" : "#FFEBE9");
-            SetThemeBrush("DiffHunkForeground", isDark ? "#79C0FF" : "#0550AE");
-            SetThemeBrush("DiffHunkBackground", isDark ? "#102A40" : "#DDF4FF");
-            SetThemeBrush("DiffHeaderForeground", isDark ? "#D2A8FF" : "#8250DF");
-            SetThemeBrush("DiffHeaderBackground", isDark ? "#271A36" : "#FBEFFF");
+            // Typify standard brushes
+            SetThemeBrush("WindowBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("SurfaceBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("SidebarBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("BorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
+            SetThemeBrush("TextBrush", isDark ? "#CCCCCC" : "#333333");
+            SetThemeBrush("MutedTextBrush", isDark ? "#858585" : "#616161");
+            SetThemeBrush("AccentBrush", isDark ? "#0E639C" : "#007ACC");
+            SetThemeBrush("AccentHoverBrush", isDark ? "#1177BB" : "#0062A3");
+            SetThemeBrush("AccentTextBrush", "#FFFFFF");
+            SetThemeBrush("HoverBrush", isDark ? "#2A2D2E" : "#E8E8E8");
+            SetThemeBrush("SelectedBrush", isDark ? "#094771" : "#E4E6F1");
+
+            // VS Code Specific Palette
+            SetThemeBrush("VsBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("VsSidebarBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("VsHeaderBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("VsBorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
+            SetThemeBrush("VsTextBrush", isDark ? "#CCCCCC" : "#333333");
+            SetThemeBrush("VsMutedTextBrush", isDark ? "#858585" : "#616161");
+            SetThemeBrush("VsPrimaryButtonBrush", isDark ? "#0E639C" : "#007ACC");
+            SetThemeBrush("VsPrimaryButtonHoverBrush", isDark ? "#1177BB" : "#0062A3");
+            SetThemeBrush("VsPrimaryButtonTextBrush", "#FFFFFF");
+            SetThemeBrush("VsSecondaryButtonBrush", isDark ? "#3A3D41" : "#E1E1E1");
+            SetThemeBrush("VsSecondaryButtonHoverBrush", isDark ? "#45494E" : "#D0D0D0");
+            SetThemeBrush("VsIconButtonHoverBrush", isDark ? "#333333" : "#E0E0E0");
+            SetThemeBrush("VsInputBackgroundBrush", isDark ? "#3C3C3C" : "#FFFFFF");
+            SetThemeBrush("VsInputBorderBrush", isDark ? "#3C3C3C" : "#CECECE");
+            SetThemeBrush("VsInputFocusBorderBrush", isDark ? "#007FD4" : "#007ACC");
+            SetThemeBrush("VsPlaceholderBrush", isDark ? "#858585" : "#767676");
+            SetThemeBrush("VsListHoverBrush", isDark ? "#2A2D2E" : "#E8E8E8");
+            SetThemeBrush("VsListSelectedBrush", isDark ? "#094771" : "#E4E6F1");
+            SetThemeBrush("VsStatusBarBrush", isDark ? "#0E639C" : "#007ACC");
+            SetThemeBrush("VsStatusBarTextBrush", "#FFFFFF");
+
+            // Status letter badges
+            SetThemeBrush("VsStatusModifiedBrush", isDark ? "#E2C08D" : "#895503");
+            SetThemeBrush("VsStatusUntrackedBrush", isDark ? "#73C991" : "#2EA043");
+            SetThemeBrush("VsStatusAddedBrush", isDark ? "#73C991" : "#2EA043");
+            SetThemeBrush("VsStatusDeletedBrush", isDark ? "#C74E39" : "#CF222E");
+            SetThemeBrush("VsStatusRenamedBrush", isDark ? "#4EC9B0" : "#0969DA");
+
+            // Diff styling
+            SetThemeBrush("DiffBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("VsDiffBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
+            SetThemeBrush("VsDiffHeaderBarBrush", isDark ? "#252526" : "#F3F3F3");
+            SetThemeBrush("VsDiffAddedBg", isDark ? "#1B3B24" : "#E6FFEC");
+            SetThemeBrush("VsDiffAddedFg", isDark ? "#89D185" : "#1A7F37");
+            SetThemeBrush("VsDiffDeletedBg", isDark ? "#471C1E" : "#FFEBE9");
+            SetThemeBrush("VsDiffDeletedFg", isDark ? "#F85149" : "#CF222E");
+            SetThemeBrush("VsDiffHunkBg", isDark ? "#1C2A3A" : "#F1F8FF");
+            SetThemeBrush("VsDiffHunkFg", isDark ? "#79C0FF" : "#0366D6");
+            SetThemeBrush("VsDiffMetaBg", isDark ? "#252526" : "#F8F9FA");
+            SetThemeBrush("VsDiffMetaFg", isDark ? "#8B949E" : "#57606A");
+            SetThemeBrush("DiffAddedForeground", isDark ? "#89D185" : "#1A7F37");
+            SetThemeBrush("DiffAddedBackground", isDark ? "#1B3B24" : "#E6FFEC");
+            SetThemeBrush("DiffDeletedForeground", isDark ? "#F85149" : "#CF222E");
+            SetThemeBrush("DiffDeletedBackground", isDark ? "#471C1E" : "#FFEBE9");
+            SetThemeBrush("DiffHunkForeground", isDark ? "#79C0FF" : "#0366D6");
+            SetThemeBrush("DiffHunkBackground", isDark ? "#1C2A3A" : "#F1F8FF");
+            SetThemeBrush("DiffHeaderForeground", isDark ? "#8B949E" : "#57606A");
+            SetThemeBrush("DiffHeaderBackground", isDark ? "#252526" : "#F8F9FA");
         }
 
         private void SetThemeBrush(string key, string color)
@@ -82,51 +151,61 @@ namespace Typify
         {
             if (ReferenceEquals(viewer, DiffViewer)) _diffSource = text ?? string.Empty;
             else if (ReferenceEquals(viewer, HistoryDiffViewer)) _historyDiffSource = text ?? string.Empty;
+
             viewer.Document.Blocks.Clear();
             viewer.Document.PagePadding = new Thickness(0);
-            viewer.Document.PageWidth = 2000;
+            viewer.Document.PageWidth = 2500;
             viewer.Document.FontFamily = new FontFamily("Consolas");
-            viewer.Document.FontSize = viewer.FontSize;
+            viewer.Document.FontSize = 12;
 
             string normalized = (text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n');
             string[] lines = normalized.Split('\n');
             foreach (string line in lines)
             {
-                string foregroundKey = null;
+                string foregroundKey = "VsTextBrush";
                 string backgroundKey = null;
+
                 if (line.StartsWith("+++ ", StringComparison.Ordinal) || line.StartsWith("--- ", StringComparison.Ordinal) ||
                     line.StartsWith("diff --git ", StringComparison.Ordinal) || line.StartsWith("index ", StringComparison.Ordinal) ||
                     line.StartsWith("new file mode ", StringComparison.Ordinal) || line.StartsWith("deleted file mode ", StringComparison.Ordinal) ||
                     line.StartsWith("old mode ", StringComparison.Ordinal) || line.StartsWith("new mode ", StringComparison.Ordinal) ||
                     line.StartsWith("rename from ", StringComparison.Ordinal) || line.StartsWith("rename to ", StringComparison.Ordinal))
                 {
-                    foregroundKey = "DiffHeaderForeground";
-                    backgroundKey = "DiffHeaderBackground";
+                    foregroundKey = "VsDiffMetaFg";
+                    backgroundKey = "VsDiffMetaBg";
                 }
                 else if (line.StartsWith("@@", StringComparison.Ordinal))
                 {
-                    foregroundKey = "DiffHunkForeground";
-                    backgroundKey = "DiffHunkBackground";
+                    foregroundKey = "VsDiffHunkFg";
+                    backgroundKey = "VsDiffHunkBg";
                 }
                 else if (line.StartsWith("+", StringComparison.Ordinal))
                 {
-                    foregroundKey = "DiffAddedForeground";
-                    backgroundKey = "DiffAddedBackground";
+                    foregroundKey = "VsDiffAddedFg";
+                    backgroundKey = "VsDiffAddedBg";
                 }
                 else if (line.StartsWith("-", StringComparison.Ordinal))
                 {
-                    foregroundKey = "DiffDeletedForeground";
-                    backgroundKey = "DiffDeletedBackground";
+                    foregroundKey = "VsDiffDeletedFg";
+                    backgroundKey = "VsDiffDeletedBg";
                 }
 
-                var paragraph = new Paragraph(new Run(line)) { Margin = new Thickness(0) };
-                if (foregroundKey != null)
+                var paragraph = new Paragraph(new Run(line))
                 {
-                    paragraph.Foreground = (Brush)FindResource(foregroundKey);
+                    Margin = new Thickness(0, 1, 0, 1),
+                    Padding = new Thickness(8, 1, 8, 1),
+                    LineHeight = 16,
+                    Foreground = (Brush)FindResource(foregroundKey)
+                };
+
+                if (backgroundKey != null)
+                {
                     paragraph.Background = (Brush)FindResource(backgroundKey);
                 }
+
                 viewer.Document.Blocks.Add(paragraph);
             }
+
             viewer.ScrollToHome();
         }
 
@@ -170,12 +249,13 @@ namespace Typify
             await RefreshAllAsync();
         }
 
-        private async Task RefreshAllAsync()
+        public async Task RefreshAllAsync()
         {
             if (_isBusy || _isRefreshing) return;
             _isRefreshing = true;
             _diffRequestId++;
             _historyRequestId++;
+
             try
             {
                 if (!Directory.Exists(_repository.RepositoryPath))
@@ -207,21 +287,159 @@ namespace Typify
                 var logTask = _repository.RunAsync("log", "--all", "--max-count=" + _historyLimit, "--date=iso-strict", "--format=%H%x00%h%x00%an%x00%ad%x00%s%x00");
                 var remoteTask = _repository.RunAsync("remote", "-v");
                 await Task.WhenAll(statusTask, branchTask, logTask, remoteTask);
+
                 if (!statusTask.Result.Succeeded)
                 {
                     SetNotRepository(statusTask.Result.CombinedOutput);
                     return;
                 }
 
-                string branchLine = (statusTask.Result.StandardOutput ?? string.Empty).Split('\n').FirstOrDefault() ?? string.Empty;
-                BranchSummary.Text = branchLine.StartsWith("## ", StringComparison.Ordinal) ? branchLine.Substring(3).Trim() : "Repository";
-                ChangesGrid.ItemsSource = GitRepositoryService.ParseStatus(statusTask.Result.StandardOutput);
-                BranchesList.ItemsSource = ParseBranches(branchTask.Result.StandardOutput);
+                // 1. Parse Branch & Ahead/Behind
+                string branchLine = (statusTask.Result.StandardOutput ?? string.Empty)
+                    .Split(new[] { '\0', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault() ?? string.Empty;
+                if (branchLine.StartsWith("## ", StringComparison.Ordinal))
+                {
+                    string info = branchLine.Substring(3).Trim();
+                    string bName = info;
+                    int dots = info.IndexOf("...", StringComparison.Ordinal);
+                    if (dots >= 0) bName = info.Substring(0, dots).Trim();
+                    else
+                    {
+                        int sp = info.IndexOf(' ');
+                        if (sp >= 0) bName = info.Substring(0, sp).Trim();
+                    }
+
+                    int ahead = 0;
+                    int behind = 0;
+                    var aheadMatch = Regex.Match(info, @"ahead (\d+)");
+                    if (aheadMatch.Success) int.TryParse(aheadMatch.Groups[1].Value, out ahead);
+                    var behindMatch = Regex.Match(info, @"behind (\d+)");
+                    if (behindMatch.Success) int.TryParse(behindMatch.Groups[1].Value, out behind);
+
+                    _currentBranchName = string.IsNullOrEmpty(bName) ? "HEAD" : bName;
+                    _aheadCount = ahead;
+                    _behindCount = behind;
+
+                    BranchSummary.Text = _currentBranchName;
+                    BranchStatusButtonText.Text = "⑂ " + _currentBranchName;
+
+                    if (ahead > 0 || behind > 0)
+                    {
+                        SyncPill.Visibility = Visibility.Visible;
+                        SyncText.Text = string.Format("↓{0} ↑{1}", behind, ahead);
+                        SyncButton.Content = string.Format("↻ Sync {0}↓ {1}↑", behind, ahead);
+                    }
+                    else
+                    {
+                        SyncPill.Visibility = Visibility.Collapsed;
+                        SyncButton.Content = "↻ Sync";
+                    }
+                }
+                else
+                {
+                    BranchSummary.Text = "Repository";
+                    BranchStatusButtonText.Text = "⑂ Repository";
+                    SyncPill.Visibility = Visibility.Collapsed;
+                    SyncButton.Content = "↻ Sync";
+                }
+
+                // 2. Parse File Changes into VS Code Staged & Unstaged lists
+                var rawChanges = GitRepositoryService.ParseStatus(statusTask.Result.StandardOutput);
+                var newStaged = new List<VsCodeChangeItem>();
+                var newUnstaged = new List<VsCodeChangeItem>();
+
+                foreach (var c in rawChanges)
+                {
+                    string dir = Path.GetDirectoryName(c.Path);
+                    if (!string.IsNullOrEmpty(c.OriginalPath))
+                    {
+                        dir = (string.IsNullOrEmpty(dir) ? "" : dir + " ") + "← " + c.OriginalPath;
+                    }
+
+                    // Staged changes (IndexStatus != ' ' and != '?')
+                    if (c.IndexStatus != ' ' && c.IndexStatus != '?')
+                    {
+                        newStaged.Add(new VsCodeChangeItem
+                        {
+                            Path = c.Path,
+                            OriginalPath = c.OriginalPath,
+                            FileName = Path.GetFileName(c.Path),
+                            DirectoryDisplay = dir,
+                            StatusLetter = c.IndexStatus.ToString(),
+                            StatusTooltip = GetStatusTooltip(c.IndexStatus, true),
+                            IsStaged = true,
+                            IsUntracked = false,
+                            SourceChange = c
+                        });
+                    }
+
+                    // Working Tree / Unstaged changes (WorkTreeStatus != ' ' or untracked)
+                    if (c.WorkTreeStatus != ' ' || c.IsUntracked)
+                    {
+                        newUnstaged.Add(new VsCodeChangeItem
+                        {
+                            Path = c.Path,
+                            OriginalPath = c.OriginalPath,
+                            FileName = Path.GetFileName(c.Path),
+                            DirectoryDisplay = dir,
+                            StatusLetter = c.IsUntracked ? "U" : c.WorkTreeStatus.ToString(),
+                            StatusTooltip = c.IsUntracked ? "Untracked" : GetStatusTooltip(c.WorkTreeStatus, false),
+                            IsStaged = false,
+                            IsUntracked = c.IsUntracked,
+                            SourceChange = c
+                        });
+                    }
+                }
+
+                _stagedItems = newStaged;
+                _unstagedItems = newUnstaged;
+
+                StagedListBox.ItemsSource = _stagedItems;
+                UnstagedListBox.ItemsSource = _unstagedItems;
+                StagedCountText.Text = _stagedItems.Count.ToString();
+                UnstagedCountText.Text = _unstagedItems.Count.ToString();
+
+                StagedSection.Visibility = _stagedItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                StagedListBox.Visibility = (_stagedItems.Count > 0 && _isStagedExpanded) ? Visibility.Visible : Visibility.Collapsed;
+                UnstagedSection.Visibility = Visibility.Visible;
+                UnstagedListBox.Visibility = _isUnstagedExpanded ? Visibility.Visible : Visibility.Collapsed;
+                NoChangesPanel.Visibility = (_stagedItems.Count == 0 && _unstagedItems.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
+                NoRepositoryPanel.Visibility = Visibility.Collapsed;
+
+                // 3. Branches, History & Remotes
+                _branches = ParseBranches(branchTask.Result.StandardOutput);
+                BranchesList.ItemsSource = _branches;
                 HistoryList.ItemsSource = GitRepositoryService.ParseLog(logTask.Result.StandardOutput);
                 RemotesText.Text = remoteTask.Result.Succeeded ? remoteTask.Result.StandardOutput.TrimEnd() : remoteTask.Result.CombinedOutput;
-                RepositoryStatusText.Text = _repository.RepositoryPath;
+
+                RepositoryStatusText.Text = Path.GetFileName(_repository.RepositoryPath);
+                RepositoryStatusText.ToolTip = _repository.RepositoryPath;
                 StatusText.Text = "Repository refreshed";
-                SetDiffContent(DiffViewer, "Select a changed file to inspect its diff.");
+                RepositoryRefreshed?.Invoke(this, EventArgs.Empty);
+
+                // Retain selection or show prompt
+                if (_currentSelectedChange != null)
+                {
+                    var match = _currentSelectedChange.IsStaged
+                        ? _stagedItems.FirstOrDefault(i => i.Path == _currentSelectedChange.Path)
+                        : _unstagedItems.FirstOrDefault(i => i.Path == _currentSelectedChange.Path);
+
+                    if (match != null)
+                    {
+                        if (match.IsStaged) StagedListBox.SelectedItem = match;
+                        else UnstagedListBox.SelectedItem = match;
+                    }
+                    else
+                    {
+                        ResetDiffViewer();
+                    }
+                }
+                else
+                {
+                    ResetDiffViewer();
+                }
+
                 SetDiffContent(HistoryDiffViewer, string.Empty);
                 CommitFilesList.ItemsSource = null;
             }
@@ -229,21 +447,55 @@ namespace Typify
             {
                 SetNotRepository(exception.Message);
             }
-            finally { _isRefreshing = false; }
+            finally
+            {
+                _isRefreshing = false;
+            }
+        }
+
+        private void ResetDiffViewer()
+        {
+            _currentSelectedChange = null;
+            DiffTitle.Text = "Select a file to inspect diff";
+            DiffPath.Text = string.Empty;
+            DiffStageButton.Visibility = Visibility.Collapsed;
+            DiffDiscardButton.Visibility = Visibility.Collapsed;
+            DiffUnstageButton.Visibility = Visibility.Collapsed;
+            SetDiffContent(DiffViewer, "Select a changed file in the sidebar to view its diff.");
         }
 
         private void SetNotRepository(string message)
         {
             BranchSummary.Text = "No repository";
-            ChangesGrid.ItemsSource = null;
+            BranchStatusButtonText.Text = "⑂ No repository";
+            SyncPill.Visibility = Visibility.Collapsed;
+            NoRepositoryPanel.Visibility = Visibility.Visible;
+            StagedListBox.ItemsSource = null;
+            UnstagedListBox.ItemsSource = null;
             BranchesList.ItemsSource = null;
             HistoryList.ItemsSource = null;
             CommitFilesList.ItemsSource = null;
-            SetDiffContent(DiffViewer, "This folder is not a Git repository. Use Initialize, Open folder, or run `git clone` from the Git command tab.");
+            ResetDiffViewer();
+            SetDiffContent(DiffViewer, "This folder is not a Git repository. Click Initialize Repository or Open Folder to begin.");
             SetDiffContent(HistoryDiffViewer, string.Empty);
             RemotesText.Clear();
             RepositoryStatusText.Text = message;
             StatusText.Text = message;
+        }
+
+        private static string GetStatusTooltip(char code, bool isStaged)
+        {
+            string suffix = isStaged ? " (Index)" : " (Working Tree)";
+            switch (code)
+            {
+                case 'M': return "Modified" + suffix;
+                case 'A': return "Added" + suffix;
+                case 'D': return "Deleted" + suffix;
+                case 'R': return "Renamed" + suffix;
+                case 'C': return "Copied" + suffix;
+                case '?': return "Untracked";
+                default: return "Changed" + suffix;
+            }
         }
 
         private static System.Collections.Generic.IList<GitBranch> ParseBranches(string output)
@@ -299,6 +551,404 @@ namespace Typify
             }
         }
 
+        // ==========================
+        // SELECTION & DIFF LOGIC
+        // ==========================
+        private void StagedListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isRefreshing || _isSyncingSelection) return;
+            var item = StagedListBox.SelectedItem as VsCodeChangeItem;
+            if (item == null) return;
+
+            _isSyncingSelection = true;
+            try { UnstagedListBox.SelectedItem = null; }
+            finally { _isSyncingSelection = false; }
+
+            SelectChangeItem(item);
+        }
+
+        private void UnstagedListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isRefreshing || _isSyncingSelection) return;
+            var item = UnstagedListBox.SelectedItem as VsCodeChangeItem;
+            if (item == null) return;
+
+            _isSyncingSelection = true;
+            try { StagedListBox.SelectedItem = null; }
+            finally { _isSyncingSelection = false; }
+
+            SelectChangeItem(item);
+        }
+
+        private async void SelectChangeItem(VsCodeChangeItem item)
+        {
+            _currentSelectedChange = item;
+            if (item == null || _isBusy) return;
+
+            int requestId = ++_diffRequestId;
+            string path = item.Path;
+            DiffTitle.Text = item.FileName + (item.IsStaged ? " (Index)" : " (Working Tree)");
+            DiffPath.Text = item.Path;
+
+            DiffStageButton.Visibility = !item.IsStaged ? Visibility.Visible : Visibility.Collapsed;
+            DiffDiscardButton.Visibility = !item.IsStaged ? Visibility.Visible : Visibility.Collapsed;
+            DiffUnstageButton.Visibility = item.IsStaged ? Visibility.Visible : Visibility.Collapsed;
+
+            try
+            {
+                string diffOutput = string.Empty;
+                if (item.IsStaged)
+                {
+                    var staged = await _repository.RunAsync("diff", "--cached", "--no-ext-diff", "--no-color", "--", path);
+                    diffOutput = staged.StandardOutput;
+                    if (string.IsNullOrWhiteSpace(diffOutput))
+                    {
+                        var show = await _repository.RunAsync("show", "--no-ext-diff", "--no-color", ":" + path);
+                        if (show.Succeeded && !string.IsNullOrWhiteSpace(show.StandardOutput))
+                        {
+                            diffOutput = "+ Newly added file staged in index\n" + show.StandardOutput;
+                        }
+                        else
+                        {
+                            diffOutput = "No text diff available for staged file.";
+                        }
+                    }
+                }
+                else
+                {
+                    if (item.IsUntracked)
+                    {
+                        string absolutePath = Path.GetFullPath(Path.Combine(_repository.RepositoryPath, path));
+                        var untracked = await _repository.RunAsync("diff", "--no-index", "--no-color", "--", "/dev/null", absolutePath);
+                        if (!string.IsNullOrWhiteSpace(untracked.StandardOutput))
+                        {
+                            diffOutput = untracked.StandardOutput;
+                        }
+                        else if (File.Exists(absolutePath))
+                        {
+                            try
+                            {
+                                string fileContent = File.ReadAllText(absolutePath);
+                                var lines = fileContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                                diffOutput = "@@ -0,0 +1," + lines.Length + " @@ (Untracked file)\n" +
+                                             string.Join("\n", lines.Select(l => "+" + l));
+                            }
+                            catch
+                            {
+                                diffOutput = "Untracked file. Click '+' to stage it.";
+                            }
+                        }
+                        else
+                        {
+                            diffOutput = "Untracked file. Click '+' to stage it.";
+                        }
+                    }
+                    else
+                    {
+                        var unstaged = await _repository.RunAsync("diff", "--no-ext-diff", "--no-color", "--", path);
+                        diffOutput = unstaged.StandardOutput;
+                        if (string.IsNullOrWhiteSpace(diffOutput))
+                        {
+                            diffOutput = "No working tree changes detected for this file.";
+                        }
+                    }
+                }
+
+                if (requestId == _diffRequestId && _currentSelectedChange == item)
+                {
+                    SetDiffContent(DiffViewer, diffOutput);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (requestId == _diffRequestId)
+                {
+                    SetDiffContent(DiffViewer, "Error reading diff: " + ex.Message);
+                }
+            }
+        }
+
+        // ==========================
+        // ACCORDION EXPAND/COLLAPSE
+        // ==========================
+        private void StagedHeader_Click(object sender, MouseButtonEventArgs e)
+        {
+            _isStagedExpanded = !_isStagedExpanded;
+            StagedChevron.Text = _isStagedExpanded ? "▼" : "▶";
+            StagedListBox.Visibility = _isStagedExpanded ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void UnstagedHeader_Click(object sender, MouseButtonEventArgs e)
+        {
+            _isUnstagedExpanded = !_isUnstagedExpanded;
+            UnstagedChevron.Text = _isUnstagedExpanded ? "▼" : "▶";
+            UnstagedListBox.Visibility = _isUnstagedExpanded ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ==========================
+        // INLINE STAGE / UNSTAGE / DISCARD
+        // ==========================
+        private async void StageItem_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            var item = (sender as FrameworkElement)?.DataContext as VsCodeChangeItem;
+            if (item == null) return;
+            var result = await RunCommandAsync("Stage file", "add", "--", item.Path);
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void UnstageItem_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            var item = (sender as FrameworkElement)?.DataContext as VsCodeChangeItem;
+            if (item == null) return;
+            var result = await RunCommandAsync("Unstage file", "restore", "--staged", "--", item.Path);
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void DiscardItem_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            var item = (sender as FrameworkElement)?.DataContext as VsCodeChangeItem;
+            if (item == null) return;
+
+            string action = item.IsUntracked ? "Delete the untracked file" : "Discard working tree changes to";
+            if (MessageBox.Show(Window.GetWindow(this), action + "\n\n" + item.Path + "\n\nThis cannot be undone.", "Discard Changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            var result = item.IsUntracked
+                ? await RunCommandAsync("Delete untracked file", "clean", "-fd", "--", item.Path)
+                : await RunCommandAsync("Discard changes", "restore", "--worktree", "--", item.Path);
+
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void StageAll_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            var result = await RunCommandAsync("Stage all changes", "add", "-A");
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void UnstageAll_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            var result = await RunCommandAsync("Unstage all changes", "restore", "--staged", ".");
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void DiscardAll_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (MessageBox.Show(Window.GetWindow(this), "Are you sure you want to discard ALL changes in the working tree?\n\nThis cannot be undone.", "Discard All Changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            var restoreResult = await RunCommandAsync("Discard working changes", "restore", "--worktree", ".");
+            await _repository.RunAsync("clean", "-fd");
+            await RefreshAllAsync();
+        }
+
+        // ==========================
+        // DIFF HEADER ACTIONS
+        // ==========================
+        private async void DiffStageButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSelectedChange == null) return;
+            var result = await RunCommandAsync("Stage file", "add", "--", _currentSelectedChange.Path);
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void DiffDiscardButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSelectedChange == null) return;
+            string action = _currentSelectedChange.IsUntracked ? "Delete the untracked file" : "Discard working tree changes to";
+            if (MessageBox.Show(Window.GetWindow(this), action + "\n\n" + _currentSelectedChange.Path + "\n\nThis cannot be undone.", "Discard Changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            var result = _currentSelectedChange.IsUntracked
+                ? await RunCommandAsync("Delete untracked file", "clean", "-fd", "--", _currentSelectedChange.Path)
+                : await RunCommandAsync("Discard changes", "restore", "--worktree", "--", _currentSelectedChange.Path);
+
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        private async void DiffUnstageButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSelectedChange == null) return;
+            var result = await RunCommandAsync("Unstage file", "restore", "--staged", "--", _currentSelectedChange.Path);
+            if (result != null && result.Succeeded) await RefreshAllAsync();
+        }
+
+        // ==========================
+        // COMMIT LOGIC
+        // ==========================
+        private void CommitMessageBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            CommitPlaceholder.Visibility = string.IsNullOrEmpty(CommitMessageBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private async void CommitMessageBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                await ExecuteCommitAsync();
+            }
+        }
+
+        private async void Commit_Click(object sender, RoutedEventArgs e)
+        {
+            await ExecuteCommitAsync();
+        }
+
+        private async Task ExecuteCommitAsync()
+        {
+            string message = CommitMessageBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                StatusText.Text = "Please provide a commit message.";
+                CommitMessageBox.Focus();
+                return;
+            }
+
+            if (_stagedItems.Count == 0)
+            {
+                if (_unstagedItems.Count == 0)
+                {
+                    StatusText.Text = "There are no changes to commit.";
+                    return;
+                }
+
+                // VS Code prompt behavior: ask to stage all and commit directly
+                var confirm = MessageBox.Show(Window.GetWindow(this),
+                    "There are no staged changes to commit.\n\nWould you like to stage all your changes and commit them directly?",
+                    "Source Control", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (confirm != MessageBoxResult.Yes) return;
+
+                var addResult = await RunCommandAsync("Stage all changes", "add", "-A");
+                if (addResult == null || !addResult.Succeeded) return;
+            }
+
+            var result = await RunCommandAsync("Commit", "commit", "-m", message);
+            if (result != null && result.Succeeded)
+            {
+                CommitMessageBox.Clear();
+                await RefreshAllAsync();
+            }
+        }
+
+        // ==========================
+        // NAVIGATION & VIEWS
+        // ==========================
+        private void NavButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (ChangesViewGrid == null) return;
+            ChangesViewGrid.Visibility = (NavChangesButton.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+            CommitsViewGrid.Visibility = (NavCommitsButton.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+            BranchesViewGrid.Visibility = (NavBranchesButton.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+            TerminalViewGrid.Visibility = (NavTerminalButton.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ==========================
+        // STATUS BAR & MENUS
+        // ==========================
+        private void BranchStatusButton_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new ContextMenu();
+            if (_branches != null && _branches.Count > 0)
+            {
+                var localBranches = _branches.Where(b => !b.IsRemote).ToList();
+                foreach (var b in localBranches)
+                {
+                    var item = new MenuItem
+                    {
+                        Header = (b.IsCurrent ? "✓  " : "    ") + b.Name,
+                        FontWeight = b.IsCurrent ? FontWeights.Bold : FontWeights.Normal,
+                        Tag = b
+                    };
+                    item.Click += async (s, ev) =>
+                    {
+                        var target = (s as MenuItem)?.Tag as GitBranch;
+                        if (target != null && !target.IsCurrent)
+                        {
+                            var result = await RunCommandAsync("Switch branch", "switch", target.Name);
+                            if (result != null && result.Succeeded) await RefreshAllAsync();
+                        }
+                    };
+                    menu.Items.Add(item);
+                }
+                menu.Items.Add(new Separator());
+            }
+
+            var createItem = new MenuItem { Header = "+ Create New Branch..." };
+            createItem.Click += (s, ev) =>
+            {
+                NavBranchesButton.IsChecked = true;
+                NewBranchBox.Focus();
+            };
+            menu.Items.Add(createItem);
+
+            var manageItem = new MenuItem { Header = "Manage Branches & Remotes..." };
+            manageItem.Click += (s, ev) => { NavBranchesButton.IsChecked = true; };
+            menu.Items.Add(manageItem);
+
+            menu.PlacementTarget = sender as UIElement;
+            menu.IsOpen = true;
+        }
+
+        private async void SyncButton_Click(object sender, RoutedEventArgs e)
+        {
+            var pullResult = await RunCommandAsync("Pull", "pull");
+            if (pullResult == null || !pullResult.Succeeded) return;
+            var pushResult = await RunCommandAsync("Push", "push");
+            if (pushResult != null && pushResult.Succeeded) await RefreshAllAsync();
+        }
+
+        private void MoreActions_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new ContextMenu();
+
+            var syncItem = new MenuItem { Header = "Sync Changes (Pull & Push)" };
+            syncItem.Click += SyncButton_Click;
+            menu.Items.Add(syncItem);
+
+            var pullItem = new MenuItem { Header = "Pull" };
+            pullItem.Click += Pull_Click;
+            menu.Items.Add(pullItem);
+
+            var pushItem = new MenuItem { Header = "Push" };
+            pushItem.Click += Push_Click;
+            menu.Items.Add(pushItem);
+
+            var fetchItem = new MenuItem { Header = "Fetch (All)" };
+            fetchItem.Click += Fetch_Click;
+            menu.Items.Add(fetchItem);
+
+            menu.Items.Add(new Separator());
+
+            var openFolderItem = new MenuItem { Header = "Open Repository Folder..." };
+            openFolderItem.Click += OpenRepository_Click;
+            menu.Items.Add(openFolderItem);
+
+            var initItem = new MenuItem { Header = "Initialize Repository..." };
+            initItem.Click += InitializeRepository_Click;
+            menu.Items.Add(initItem);
+
+            var cloneItem = new MenuItem { Header = "Clone Repository..." };
+            cloneItem.Click += (s, ev) => NavBranchesButton.IsChecked = true;
+            menu.Items.Add(cloneItem);
+
+            menu.Items.Add(new Separator());
+
+            var terminalItem = new MenuItem { Header = "Open Git Terminal..." };
+            terminalItem.Click += (s, ev) => NavTerminalButton.IsChecked = true;
+            menu.Items.Add(terminalItem);
+
+            menu.PlacementTarget = sender as UIElement;
+            menu.IsOpen = true;
+        }
+
         private async void Fetch_Click(object sender, RoutedEventArgs e)
         {
             var result = await RunCommandAsync("Fetch", "fetch", "--all", "--prune");
@@ -317,94 +967,10 @@ namespace Typify
             if (result != null && result.Succeeded) await RefreshAllAsync();
         }
 
-        private async void Stage_Click(object sender, RoutedEventArgs e)
-        {
-            var change = ChangesGrid.SelectedItem as GitFileChange;
-            if (change == null) { StatusText.Text = "Select a file to stage"; return; }
-            var result = await RunCommandAsync("Stage file", "add", "--", change.Path);
-            if (result != null && result.Succeeded) await RefreshAllAsync();
-        }
-
-        private async void Unstage_Click(object sender, RoutedEventArgs e)
-        {
-            var change = ChangesGrid.SelectedItem as GitFileChange;
-            if (change == null) { StatusText.Text = "Select a file to unstage"; return; }
-            var result = await RunCommandAsync("Unstage file", "restore", "--staged", "--", change.Path);
-            if (result != null && result.Succeeded) await RefreshAllAsync();
-        }
-
-        private async void Discard_Click(object sender, RoutedEventArgs e)
-        {
-            var change = ChangesGrid.SelectedItem as GitFileChange;
-            if (change == null) { StatusText.Text = "Select a file to discard"; return; }
-            if (change.WorkTreeStatus == ' ' && !change.IsUntracked)
-            {
-                StatusText.Text = "The selected file has no unstaged changes";
-                return;
-            }
-            string action = change.IsUntracked ? "Delete the untracked file" : "Discard unstaged edits to";
-            if (MessageBox.Show(Window.GetWindow(this), action + "\n\n" + change.Path + "\n\nThis cannot be undone.", "Discard changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-                return;
-            var result = change.IsUntracked
-                ? await RunCommandAsync("Delete untracked file", "clean", "-fd", "--", change.Path)
-                : await RunCommandAsync("Discard working changes", "restore", "--worktree", "--", change.Path);
-            if (result != null && result.Succeeded) await RefreshAllAsync();
-        }
-
-        private async void ChangesGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (_isRefreshing) return;
-            var change = ChangesGrid.SelectedItem as GitFileChange;
-            if (change == null || _isBusy) return;
-            int requestId = ++_diffRequestId;
-            DiffTitle.Text = change.Path;
-            string path = change.Path;
-            try
-            {
-                var diffs = new System.Collections.Generic.List<string>();
-                if (change.IsUntracked)
-                {
-                    string absolutePath = Path.GetFullPath(Path.Combine(_repository.RepositoryPath, path));
-                    var untracked = await _repository.RunAsync("diff", "--no-index", "--no-color", "--", "/dev/null", absolutePath);
-                    if (!string.IsNullOrWhiteSpace(untracked.StandardOutput)) diffs.Add(untracked.StandardOutput);
-                    else diffs.Add("Untracked file. Stage it to include it in the index.");
-                }
-                else
-                {
-                    if (change.IndexStatus != ' ')
-                    {
-                        var staged = await _repository.RunAsync("diff", "--cached", "--no-ext-diff", "--no-color", "--", path);
-                        if (!string.IsNullOrWhiteSpace(staged.StandardOutput)) diffs.Add("Staged changes\n" + staged.StandardOutput);
-                    }
-                    if (change.WorkTreeStatus != ' ')
-                    {
-                        var unstaged = await _repository.RunAsync("diff", "--no-ext-diff", "--no-color", "--", path);
-                        if (!string.IsNullOrWhiteSpace(unstaged.StandardOutput)) diffs.Add("Unstaged changes\n" + unstaged.StandardOutput);
-                    }
-                    if (diffs.Count == 0) diffs.Add("No text diff is available for this change.");
-                }
-                if (requestId == _diffRequestId && ReferenceEquals(ChangesGrid.SelectedItem, change))
-                    SetDiffContent(DiffViewer, string.Join(Environment.NewLine + Environment.NewLine, diffs));
-            }
-            catch (Exception exception)
-            {
-                if (requestId == _diffRequestId) SetDiffContent(DiffViewer, exception.Message);
-            }
-        }
-
-        private async void Commit_Click(object sender, RoutedEventArgs e)
-        {
-            string message = CommitMessageBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(message)) { StatusText.Text = "Enter a commit message"; return; }
-            var result = await RunCommandAsync("Commit", "commit", "-m", message);
-            if (result != null && result.Succeeded)
-            {
-                CommitMessageBox.Clear();
-                await RefreshAllAsync();
-            }
-        }
-
-        private async void HistoryList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        // ==========================
+        // COMMITS / HISTORY
+        // ==========================
+        private async void HistoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isRefreshing) return;
             var commit = HistoryList.SelectedItem as GitCommit;
@@ -462,8 +1028,11 @@ namespace Typify
             if (result != null && result.Succeeded) await RefreshAllAsync();
         }
 
-        private void CommitFilesList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) { }
+        private void CommitFilesList_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
 
+        // ==========================
+        // BRANCHES & REMOTES
+        // ==========================
         private async void CreateBranch_Click(object sender, RoutedEventArgs e)
         {
             string name = NewBranchBox.Text.Trim();
@@ -555,6 +1124,9 @@ namespace Typify
             }
         }
 
+        // ==========================
+        // TERMINAL / COMMAND
+        // ==========================
         private async void RunGitCommand_Click(object sender, RoutedEventArgs e)
         {
             await RunGitCommandAsync();
