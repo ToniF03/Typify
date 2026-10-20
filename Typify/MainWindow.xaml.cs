@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -19,12 +21,26 @@ namespace Typify
 {
     public partial class MainWindow : Window
     {
+        private const int DwmWindowCornerPreferenceAttribute = 33;
+        private const int DwmTransitionsForcedDisabledAttribute = 3;
+        private const int DwmWindowCornerDoNotRound = 1;
+        private const int DwmWindowCornerRound = 2;
+        private const int ShowWindowMinimize = 6;
+        private const int ShowWindowMaximize = 3;
+        private const int ShowWindowRestore = 9;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr windowHandle, int attribute, ref int value, int valueSize);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr windowHandle, int command);
+
         private const int PreviewDebounceMilliseconds = 50;
         private readonly DispatcherTimer _previewTimer;
         private CancellationTokenSource _previewCancellation;
         private string _lastRequestedSource;
         private string _workingDirectory = GetDefaultWorkingDirectory();
-        private string _currentSourceDirectory;
+        private string _currentSourceDirectory = string.Empty;
         private int _previewVersion;
         private bool _isClosing;
         private bool _isDarkTheme;
@@ -34,6 +50,7 @@ namespace Typify
             _previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(PreviewDebounceMilliseconds) };
             _previewTimer.Tick += PreviewTimer_Tick;
             InitializeComponent();
+            UpdateWindowStateControls();
             Editor.TextChanged += Editor_TextChanged;
             KeyDown += MainWindow_KeyDown;
             ExplorerOverlay.DockToggleRequested += ExplorerOverlay_DockToggleRequested;
@@ -260,6 +277,73 @@ namespace Typify
             ApplyTheme(_isDarkTheme);
         }
 
+        private void MinimizeWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowWindow(new WindowInteropHelper(this).Handle, ShowWindowMinimize);
+        }
+
+        private void MaximizeWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            int command = WindowState == WindowState.Maximized ? ShowWindowRestore : ShowWindowMaximize;
+            ShowWindow(new WindowInteropHelper(this).Handle, command);
+        }
+
+        private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            UpdateWindowStateControls();
+            UpdateWindowCornerPreference();
+        }
+
+        private void MainWindow_SourceInitialized(object sender, EventArgs e)
+        {
+            ApplyOverlappedWindowStyle();
+            UpdateWindowCornerPreference();
+        }
+
+        private void UpdateWindowStateControls()
+        {
+            bool isMaximized = WindowState == WindowState.Maximized;
+            MaximizeWindowGlyph.Text = isMaximized ? "\uE923" : "\uE922";
+            MaximizeWindowButton.ToolTip = isMaximized ? "Restore" : "Maximize";
+        }
+
+        private void UpdateWindowCornerPreference()
+        {
+            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
+            if (windowHandle == IntPtr.Zero) return;
+
+            int preference = WindowState == WindowState.Maximized
+                ? DwmWindowCornerDoNotRound
+                : DwmWindowCornerRound;
+
+            try
+            {
+                int transitionsForcedDisabled = 0;
+                DwmSetWindowAttribute(
+                    windowHandle,
+                    DwmTransitionsForcedDisabledAttribute,
+                    ref transitionsForcedDisabled,
+                    Marshal.SizeOf(typeof(int)));
+
+                DwmSetWindowAttribute(
+                    windowHandle,
+                    DwmWindowCornerPreferenceAttribute,
+                    ref preference,
+                    Marshal.SizeOf(typeof(int)));
+            }
+            catch (DllNotFoundException)
+            {
+            }
+            catch (EntryPointNotFoundException)
+            {
+            }
+        }
+
         private void ApplyTheme(bool isDark)
         {
             SetThemeBrush("WindowBackgroundBrush", isDark ? "#1E1E1E" : "#FFFFFF");
@@ -278,6 +362,7 @@ namespace Typify
             SetThemeBrush("DiagnosticBackgroundBrush", isDark ? "#2B1B1D" : "#FFF2F1");
             SetThemeBrush("DiagnosticTextBrush", isDark ? "#F14C4C" : "#CF222E");
             SetThemeBrush("PreviewPageBorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
+            SetThemeBrush("WindowCaptionButtonHoverBrush", isDark ? "#333333" : "#E0E0E0");
 
             Editor.IsDarkTheme = isDark;
             GitView.UpdateTheme(isDark);
