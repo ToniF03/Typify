@@ -24,30 +24,85 @@ namespace Typify
     {
         private bool _isDarkTheme;
         private string _workingDirectory;
+        private readonly List<string> _rootDirectories = new List<string>();
+
+        /// <summary>
+        /// Gets the first root for compatibility with callers that expect a single working directory.
+        /// Setting this property replaces the configured roots with the specified directory.
+        /// </summary>
         public string WorkingDirectory
         {
             get { return _workingDirectory; }
             set
             {
-                _workingDirectory = value;
-                if (!string.IsNullOrEmpty(_workingDirectory))
+                _rootDirectories.Clear();
+                if (!string.IsNullOrWhiteSpace(value) && Directory.Exists(value))
                 {
-                    InitializeProjectTree();
-                    OpenFilePanel.Visibility = Visibility.Collapsed;
-                    ProjectTree.Visibility = Visibility.Visible;
-                    SearchTextBox.IsEnabled = true;
-                    RefreshButton.IsEnabled = true;
-                    SearchButton.IsEnabled = true;
+                    _rootDirectories.Add(System.IO.Path.GetFullPath(value));
                 }
-                else
+
+                _workingDirectory = _rootDirectories.Count > 0 ? _rootDirectories[0] : value;
+                UpdateRootView();
+            }
+        }
+
+        /// <summary>
+        /// Adds an existing directory as another top-level explorer root.
+        /// Returns false when the path is invalid or already present.
+        /// </summary>
+        public bool AddRootDirectory(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return false;
+
+            string fullPath = System.IO.Path.GetFullPath(path);
+            if (_rootDirectories.Any(root => string.Equals(root, fullPath, StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            _rootDirectories.Add(fullPath);
+            if (string.IsNullOrWhiteSpace(_workingDirectory))
+                _workingDirectory = fullPath;
+
+            UpdateRootView();
+            return true;
+        }
+
+        private void UpdateRootView()
+        {
+            bool hasRoots = _rootDirectories.Count > 0;
+            if (hasRoots)
+            {
+                InitializeProjectTree();
+                OpenFilePanel.Visibility = Visibility.Collapsed;
+                ProjectTree.Visibility = Visibility.Visible;
+                SearchTextBox.IsEnabled = true;
+                RefreshButton.IsEnabled = true;
+                SearchButton.IsEnabled = true;
+            }
+            else
+            {
+                CancelPendingSearch();
+                ProjectTree.Items.Clear();
+                OpenFilePanel.Visibility = Visibility.Visible;
+                ProjectTree.Visibility = Visibility.Collapsed;
+                SearchTextBox.IsEnabled = false;
+                RefreshButton.IsEnabled = false;
+                SearchButton.IsEnabled = false;
+                SearchTextBox.Text = string.Empty;
+            }
+        }
+
+        private void AddRootDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                dialog.Description = "Select a folder to add to the Explorer";
+                dialog.SelectedPath = Directory.Exists(_workingDirectory)
+                    ? _workingDirectory
+                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    ProjectTree.Items.Clear();
-                    OpenFilePanel.Visibility = Visibility.Visible;
-                    ProjectTree.Visibility = Visibility.Collapsed;
-                    SearchTextBox.IsEnabled = false;
-                    RefreshButton.IsEnabled = false;
-                    SearchButton.IsEnabled = false;
-                    SearchTextBox.Text = string.Empty;
+                    AddRootDirectory(dialog.SelectedPath);
                 }
             }
         }
@@ -75,6 +130,17 @@ namespace Typify
         public event EventHandler VisibilityChanged;
         public event EventHandler DockToggleRequested;
         public event EventHandler CloseDockedRequested;
+        public event EventHandler<FileOpenRequestedEventArgs> FileOpenRequested;
+
+        public sealed class FileOpenRequestedEventArgs : EventArgs
+        {
+            public string FilePath { get; private set; }
+
+            public FileOpenRequestedEventArgs(string filePath)
+            {
+                FilePath = filePath;
+            }
+        }
 
         public ExplorerOverlay()
         {
@@ -93,7 +159,6 @@ namespace Typify
         public void SetWorkingDirectory(string path)
         {
             WorkingDirectory = path;
-            InitializeProjectTree();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -204,17 +269,32 @@ namespace Typify
         {
             CancelPendingSearch();
             ProjectTree.Items.Clear();
-            if (!Directory.Exists(WorkingDirectory))
-            {
-                return;
-            }
 
-            string rootPath = System.IO.Path.GetFullPath(WorkingDirectory);
+            // Keep roots separate in the tree so each can be expanded and searched independently.
+            foreach (string rootPath in _rootDirectories)
+            {
+                if (!Directory.Exists(rootPath)) continue;
+
+                var root = CreateDirectoryNode(rootPath, GetRootDisplayName(rootPath));
+                root.ToolTip = rootPath;
+                ProjectTree.Items.Add(root);
+                root.IsExpanded = true;
+            }
+        }
+
+        private string GetRootDisplayName(string rootPath)
+        {
             string rootName = System.IO.Path.GetFileName(rootPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
-            var root = CreateDirectoryNode(rootPath, string.IsNullOrEmpty(rootName) ? rootPath : rootName);
-            root.ToolTip = rootPath;
-            ProjectTree.Items.Add(root);
-            root.IsExpanded = true;
+            if (string.IsNullOrEmpty(rootName)) rootName = rootPath;
+
+            int matchingNames = _rootDirectories.Count(path =>
+            {
+                string name = System.IO.Path.GetFileName(path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
+                if (string.IsNullOrEmpty(name)) name = path;
+                return string.Equals(name, rootName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            return matchingNames > 1 ? rootPath : rootName;
         }
 
         private TreeViewItem CreateDirectoryNode(string path, string header)
@@ -228,6 +308,32 @@ namespace Typify
             item.Items.Add(new TreeViewItem { Header = "Loading…", Tag = DirectoryPlaceholderTag, IsEnabled = false });
             item.Expanded += DirectoryNode_Expanded;
             return item;
+        }
+
+        private TreeViewItem CreateFileNode(string path, string fileName)
+        {
+            var item = new TreeViewItem
+            {
+                Header = CreateExplorerHeader(fileName, false),
+                Tag = path,
+                ToolTip = path
+            };
+            item.MouseDoubleClick += FileNode_MouseDoubleClick;
+            return item;
+        }
+
+        private void FileNode_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var fileNode = sender as TreeViewItem;
+            string filePath = fileNode?.Tag as string;
+            if (string.IsNullOrWhiteSpace(filePath) ||
+                !string.Equals(System.IO.Path.GetExtension(filePath), ".typ", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            FileOpenRequested?.Invoke(this, new FileOpenRequestedEventArgs(filePath));
+            e.Handled = true;
         }
 
         private object CreateExplorerHeader(string name, bool isDirectory)
@@ -334,6 +440,7 @@ namespace Typify
             if (placeholder == null || !string.Equals(placeholder.Tag as string, DirectoryPlaceholderTag, StringComparison.Ordinal))
                 return;
 
+            // The placeholder is replaced on first expansion, avoiding a full filesystem scan at startup.
             directoryNode.Items.Clear();
             string directoryPath = directoryNode.Tag as string;
             try
@@ -345,7 +452,7 @@ namespace Typify
                 {
                     string fileName = System.IO.Path.GetFileName(file);
                     if (fileName.StartsWith("TypifyPreview-", StringComparison.OrdinalIgnoreCase)) continue;
-                    directoryNode.Items.Add(new TreeViewItem { Header = CreateExplorerHeader(fileName, false), Tag = file, ToolTip = file });
+                    directoryNode.Items.Add(CreateFileNode(file, fileName));
                 }
             }
             catch (UnauthorizedAccessException)

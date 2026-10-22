@@ -16,7 +16,7 @@ namespace Typify
 
         private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (WorkingDirectory == string.Empty) return;
+            if (_rootDirectories.Count == 0) return;
             CancelPendingSearch();
             string searchText = SearchTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(searchText))
@@ -26,8 +26,7 @@ namespace Typify
             }
 
             ProjectTree.Items.Clear();
-            string rootPath = Path.GetFullPath(WorkingDirectory);
-            string rootName = Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            List<string> rootPaths = _rootDirectories.Where(Directory.Exists).ToList();
             var cancellation = new CancellationTokenSource();
             _searchCancellation = cancellation;
 
@@ -35,17 +34,23 @@ namespace Typify
             {
                 if (!await DelayUnlessCancelledAsync(SearchDebounceMilliseconds, cancellation.Token)) return;
 
-                SearchDirectoryResult results = await Task.Run(
-                    () => FindSearchMatches(rootPath, searchText, cancellation.Token));
+                // Scan independent roots in one background operation so typing never blocks the UI.
+                List<SearchDirectoryResult> results = await Task.Run(
+                    () => rootPaths.Select(rootPath => FindSearchMatches(rootPath, searchText, cancellation.Token)).ToList());
 
                 if (cancellation.IsCancellationRequested || results == null) return;
 
-                var root = CreateDirectoryNode(rootPath, string.IsNullOrEmpty(rootName) ? rootPath : rootName);
-                root.ToolTip = rootPath;
-                root.Items.Clear();
-                AddSearchResults(root, results);
-                ProjectTree.Items.Add(root);
-                root.IsExpanded = true;
+                foreach (SearchDirectoryResult result in results)
+                {
+                    if (result == null) continue;
+
+                    var root = CreateDirectoryNode(result.Path, GetRootDisplayName(result.Path));
+                    root.ToolTip = result.Path;
+                    root.Items.Clear();
+                    AddSearchResults(root, result);
+                    ProjectTree.Items.Add(root);
+                    root.IsExpanded = true;
+                }
             }
             finally
             {
@@ -154,12 +159,7 @@ namespace Typify
 
             foreach (SearchFileResult file in result.Files)
             {
-                parent.Items.Add(new TreeViewItem
-                {
-                    Header = CreateExplorerHeader(file.Name, false),
-                    Tag = file.Path,
-                    ToolTip = file.Path
-                });
+                parent.Items.Add(CreateFileNode(file.Path, file.Name));
             }
         }
 

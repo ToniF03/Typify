@@ -9,7 +9,7 @@
              IsHitTestVisible="True"
              HorizontalAlignment="Left" VerticalAlignment="Stretch">
     <UserControl.Resources>
-        <!-- VS Code / Visual Studio Theme Palettes (dynamically updated in code-behind via ApplyTheme) -->
+        <!-- Shared color resources; ApplyTheme replaces these brushes when the application theme changes. -->
         <SolidColorBrush x:Key="VsBackgroundBrush" Color="#1E1E1E" />
         <SolidColorBrush x:Key="VsSidebarBrush" Color="#252526" />
         <SolidColorBrush x:Key="VsHeaderBrush" Color="#252526" />
@@ -186,6 +186,7 @@
         </Style>
     </UserControl.Resources>
 
+    <!-- Card containing the overlay header, search controls, and lazy-loaded folder tree. -->
     <Border x:Name="OverlayWindowCard" HorizontalAlignment="Left" VerticalAlignment="Stretch"
            Width="360" Background="{DynamicResource VsBackgroundBrush}"
            BorderBrush="{DynamicResource VsBorderBrush}" BorderThickness="0,0,1,0"
@@ -200,14 +201,15 @@
 
         <Grid>
             <Grid.RowDefinitions>
-                <!-- Row 0: Window Header -->
+                <!-- Title bar and explorer actions. -->
                 <RowDefinition Height="36" />
+                <!-- Search controls. -->
                 <RowDefinition Height="36" />
-                <!-- Row 2: Scrollable body (message, options, staged & unstaged accordions) -->
+                <!-- Folder tree or the prompt shown before any root has been added. -->
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- ROW 0: WINDOW HEADER BAR (Draggable, double-click to re-dock) -->
+            <!-- Header actions control refreshing, adding roots, docking, and closing the overlay. -->
             <Border Grid.Row="0" x:Name="TabHeaderBar" Background="{DynamicResource VsHeaderBrush}"
                    BorderBrush="{DynamicResource VsBorderBrush}" BorderThickness="0,0,0,1"
                    CornerRadius="0,6,0,0">
@@ -217,14 +219,15 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Title: Git Changes - <Repo> -->
                     <TextBlock x:Name="TitleText" Text="Explorer" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource VsTextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
 
 
-                    <!-- Controls: Dock/Reset, Close -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="RefreshButton" Style="{StaticResource VsIconButton}" ToolTip="Refresh" Margin="0,0,2,0" Click="RefreshExplorer_Click">
                             <TextBlock Text="↻" FontSize="10" Foreground="{DynamicResource VsMutedTextBrush}" />
+                        </Button>
+                        <Button x:Name="AddRootButton" Style="{StaticResource VsIconButton}" ToolTip="Add folder root" Margin="0,0,2,0" Click="AddRootDirectory_Click">
+                            <TextBlock Text="+" FontSize="16" Foreground="{DynamicResource VsMutedTextBrush}" />
                         </Button>
                         <Button x:Name="DockButton" Style="{StaticResource VsIconButton}" ToolTip="Dock to left edge"
                                 Margin="0,0,2,0" Click="DockButton_Click">
@@ -237,6 +240,7 @@
                 </Grid>
             </Border>
 
+            <!-- Searches file and folder names beneath every configured root. -->
             <Border Grid.Row="1" Margin="10, 8" BorderBrush="{DynamicResource VsBorderBrush}" BorderThickness="1">
                 <Grid Background="{DynamicResource VsInputBackgroundBrush}">
                     <Grid.ColumnDefinitions>
@@ -250,12 +254,13 @@
                 </Grid>
             </Border>
 
+            <!-- Each top-level item represents one independently configured folder root. -->
             <TreeView x:Name="ProjectTree" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       Background="Transparent" Margin="10, 8"
                       ItemContainerStyle="{StaticResource ExplorerTreeViewItemStyle}" />
             <StackPanel x:Name="OpenFilePanel" Grid.Row="2" Margin="10,8" VerticalAlignment="Center" Visibility="Collapsed">
-                <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,8">There is currently no working directory selected.</TextBlock>
-                <Button>Open a Working Directory</Button>
+                <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,8">No folder roots have been added.</TextBlock>
+                <Button HorizontalAlignment="Center" Padding="10,4" Click="AddRootDirectory_Click">Add a Folder Root</Button>
             </StackPanel>
         </Grid>
     </Border>

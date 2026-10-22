@@ -73,6 +73,7 @@ namespace Typify
             UpdateWindowStateControls();
             Editor.TextChanged += Editor_TextChanged;
             KeyDown += MainWindow_KeyDown;
+            ExplorerOverlay.FileOpenRequested += ExplorerOverlay_FileOpenRequested;
             ExplorerOverlay.DockToggleRequested += ExplorerOverlay_DockToggleRequested;
             ExplorerOverlay.CloseDockedRequested += ExplorerOverlay_CloseDockedRequested;
             CommitOverlay.DockToggleRequested += CommitOverlay_DockToggleRequested;
@@ -197,15 +198,6 @@ namespace Typify
 
             if (!ExplorerOverlay.IsDocked && ExplorerOverlay.IsOpen)
                 ExplorerOverlay.ToggleVisibility();
-        }
-
-        private static string GetDefaultWorkingDirectory()
-        {
-            string applicationDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string repositoryDirectory = Path.GetFullPath(Path.Combine(applicationDirectory, @"..\..\.."));
-            return File.Exists(Path.Combine(repositoryDirectory, "Typify.slnx"))
-                ? repositoryDirectory
-                : applicationDirectory;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -709,16 +701,7 @@ namespace Typify
                     };
                     if (openDialog.ShowDialog(this) == true)
                     {
-                        try
-                        {
-                            Editor.Text = File.ReadAllText(openDialog.FileName);
-                            StatusText.Text = "Opened: " + openDialog.FileName;
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(this, ex.Message, "Error opening file", MessageBoxButton.OK, MessageBoxImage.Error);
-                            StatusText.Text = "Failed to open file.";
-                        }
+                        OpenTypstFile(openDialog.FileName);
                     }
                     break;
                 case "Save":
@@ -745,6 +728,7 @@ namespace Typify
                             StatusText.Text = "Failed to save file.";
                         }
                     }
+
                     break;
                 case "Print":
                     await PrintDocumentAsync();
@@ -752,6 +736,25 @@ namespace Typify
                 case "Preferences":
                     // Handle preferences
                     break;
+            }
+        }
+
+        private void ExplorerOverlay_FileOpenRequested(object sender, ExplorerOverlay.FileOpenRequestedEventArgs e)
+        {
+            OpenTypstFile(e.FilePath);
+        }
+
+        private void OpenTypstFile(string filePath)
+        {
+            try
+            {
+                Editor.Text = File.ReadAllText(filePath);
+                StatusText.Text = "Opened: " + filePath;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Error opening file", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusText.Text = "Failed to open file.";
             }
         }
 
