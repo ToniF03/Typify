@@ -28,6 +28,7 @@
         <SolidColorBrush x:Key="AccentBrush" Color="#007ACC" />
         <SolidColorBrush x:Key="AccentHoverBrush" Color="#0062A3" />
         <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="GitBrush" Color="#F03C2E" />
         <SolidColorBrush x:Key="HoverBrush" Color="#E8E8E8" />
         <SolidColorBrush x:Key="SelectedBrush" Color="#E4E6F1" />
         <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFF" />
@@ -37,6 +38,89 @@
         <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#E5E5E5" />
         <SolidColorBrush x:Key="WindowCaptionButtonHoverBrush" Color="#E0E0E0" />
         <SolidColorBrush x:Key="WindowCloseButtonHoverBrush" Color="#C42B1C" />
+
+        <Style x:Key="TopMenuItemStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Padding" Value="8,10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TopMenuContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="HasDropShadow" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}" CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel IsItemsHost="True"
+                                        KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TopMenuContextMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="MenuItemChrome" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Icon"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                  Margin="8,0,0,0" RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="MenuItemChrome" Property="Background"
+                                        Value="{DynamicResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TopMenuSeparatorStyle" TargetType="Separator">
+            <Setter Property="Margin" Value="6,3" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -275,10 +359,10 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Grid>
+    <Grid x:Name="mainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="32" />
-            <RowDefinition Height="64" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="*" />
             <RowDefinition Height="32" />
         </Grid.RowDefinitions>
@@ -319,36 +403,167 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
-                        <TextBlock Text="T" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource AccentTextBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="Typify" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Typst workspace" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,0" />
-                    </StackPanel>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="8,0">
 
-                    <Button x:Name="ThemeToggleButton" Margin="0,0,8,0" Click="ThemeToggleButton_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="ThemeIcon" Text="◐" FontSize="15" Margin="0,0,7,0" />
-                            <TextBlock x:Name="ThemeLabel" Text="Dark theme" />
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="ExportButton" Style="{StaticResource PrimaryButtonStyle}"
-                            Content="Export PDF" Click="ExportPdf_Click" />
-                </StackPanel>
-            </Grid>
+
+                <Border Style="{StaticResource TopMenuItemStyle}"
+                        PreviewMouseLeftButtonDown="TopMenuItem_PreviewMouseLeftButtonDown">
+                    <Border.ContextMenu>
+                        <ContextMenu Style="{StaticResource TopMenuContextMenuStyle}">
+                            <MenuItem Header="New" Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <MenuItem Header="Open" Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Save" Style="{StaticResource TopMenuContextMenuItemStyle}">
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.SaveGeometry}"
+                                          Fill="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Save As..." Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Print" Style="{StaticResource TopMenuContextMenuItemStyle}" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.PrintGeometry}"
+                                          Fill="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Export PDF..." Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="ExportPdf_Click" />
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Preferences" Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Exit" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="CloseWindowButton_Click" />
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="File" FontSize="11" FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource TopMenuItemStyle}"
+                        PreviewMouseLeftButtonDown="TopMenuItem_PreviewMouseLeftButtonDown">
+                    <Border.ContextMenu>
+                        <ContextMenu Style="{StaticResource TopMenuContextMenuStyle}">
+                            <MenuItem Header="Undo" Tag="Undo" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.UndoGeometry}"
+                                          Stroke="{DynamicResource TextBrush}" 
+                                          StrokeThickness="1.5" 
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Width="14" Height="14"
+                                          Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                                        <Path.RenderTransform>
+                                            <ScaleTransform ScaleX="-1.0" />
+                                        </Path.RenderTransform>
+                                    </Path>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Redo" Tag="Redo" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.UndoGeometry}"
+                                          Stroke="{DynamicResource TextBrush}" 
+                                          StrokeThickness="1.5" 
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Cut" Tag="Cut" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.CutGeometry}"
+                                          Fill="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Copy" Tag="Copy" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.CopyGeometry}"
+                                          Fill="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Paste" Tag="Paste" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" >
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.PasteGeometry}"
+                                          Stroke="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
+                            <MenuItem Header="Select All" Tag="SelectAll"
+                                      Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="EditorEditCommand_Click" />
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="Edit" FontSize="11" FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource TopMenuItemStyle}"
+                        PreviewMouseLeftButtonDown="TopMenuItem_PreviewMouseLeftButtonDown">
+                    <Border.ContextMenu>
+                        <ContextMenu Style="{StaticResource TopMenuContextMenuStyle}">
+                            <MenuItem Header="Toggle Live Preview" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="LivePreviewButton_Click" />
+                            <MenuItem Header="Toggle Dark Mode" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="ThemeToggleButton_Click">
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.DarkModeGeometry}"
+                                          Fill="{DynamicResource TextBrush}" Width="14" Height="14"
+                                          Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Style="{StaticResource TopMenuContextMenuItemStyle}">
+                                <MenuItem.Header>Toggle Git Window</MenuItem.Header>
+                                <MenuItem.Icon>
+                                    <Path Data="{x:Static typify:MainWindow.GitGeometry}"
+                                          Fill="{DynamicResource GitBrush}" Width="14" Height="14"
+                                          Stretch="Uniform">
+                                        <Path.LayoutTransform>
+                                            <RotateTransform Angle="-45" />
+                                        </Path.LayoutTransform>
+                                    </Path>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="View" FontSize="11" FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource TopMenuItemStyle}"
+                        PreviewMouseLeftButtonDown="TopMenuItem_PreviewMouseLeftButtonDown">
+                    <Border.ContextMenu>
+                        <ContextMenu Style="{StaticResource TopMenuContextMenuStyle}">
+                            <MenuItem Header="Git Changes" Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="GitChangesMenuItem_Click" />
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="Git" FontSize="11" FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Border>
 
         <Grid x:Name="OverlayHost" Grid.Row="2">
@@ -437,9 +652,9 @@
                     <TabItem Header="Workspace">
                         <Grid Margin="8">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MinWidth="240" />
-                                <ColumnDefinition Width="4" />
-                                <ColumnDefinition Width="*" MinWidth="240" />
+                                <ColumnDefinition x:Name="EditorColumn" Width="*" MinWidth="240" />
+                                <ColumnDefinition x:Name="PreviewSplitterColumn" Width="0" />
+                                <ColumnDefinition x:Name="PreviewColumn" Width="0" />
                             </Grid.ColumnDefinitions>
 
                             <Grid Grid.Column="0" Margin="8,0">
@@ -455,10 +670,14 @@
                                         CaretBrush="{DynamicResource TextBrush}"
                                         Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
                             </Grid>
-                            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          Background="Transparent" ResizeBehavior="PreviousAndNext" />
-                            <Border Grid.Column="2" Margin="8,0,0,0" Padding="12" Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10">
+                            <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Width="6"
+                                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                          Background="Transparent" ResizeBehavior="PreviousAndNext"
+                                          Visibility="Collapsed" />
+                            <Border x:Name="PreviewPanel" Grid.Column="2" Margin="8,0,0,0" Padding="12"
+                                    Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+                                    Visibility="Collapsed">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -468,7 +687,7 @@
                                     </Grid.RowDefinitions>
                                     <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
                                Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,7" />
-                                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Waiting for Typst…"
+                                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Live preview is off"
                                Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,10" />
                                     <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">

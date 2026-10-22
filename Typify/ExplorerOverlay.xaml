@@ -165,6 +165,10 @@
             </Border>
 
             <TreeView x:Name="ProjectTree" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" Margin="10, 8" />
+            <StackPanel Grid.Row="2" Margin="10,8" VerticalAlignment="Center" Visibility="Collapsed">
+                <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,8">There is currently no working directory selected.</TextBlock>
+                <Button>Open a Working Directory</Button>
+            </StackPanel>
         </Grid>
     </Border>
 </UserControl>
