@@ -24,6 +24,33 @@ namespace Typify
     {
         private bool _isDarkTheme;
         private string _workingDirectory;
+        public string WorkingDirectory
+        {
+            get { return _workingDirectory; }
+            set
+            {
+                _workingDirectory = value;
+                if (!string.IsNullOrEmpty(_workingDirectory))
+                {
+                    InitializeProjectTree();
+                    OpenFilePanel.Visibility = Visibility.Collapsed;
+                    ProjectTree.Visibility = Visibility.Visible;
+                    SearchTextBox.IsEnabled = true;
+                    RefreshButton.IsEnabled = true;
+                    SearchButton.IsEnabled = true;
+                }
+                else
+                {
+                    ProjectTree.Items.Clear();
+                    OpenFilePanel.Visibility = Visibility.Visible;
+                    ProjectTree.Visibility = Visibility.Collapsed;
+                    SearchTextBox.IsEnabled = false;
+                    RefreshButton.IsEnabled = false;
+                    SearchButton.IsEnabled = false;
+                    SearchTextBox.Text = string.Empty;
+                }
+            }
+        }
         private Effect _floatingEffect;
         private const string DirectoryPlaceholderTag = "__TypifyDirectoryPlaceholder__";
         private static readonly Geometry FolderIconGeometry = Geometry.Parse("M1,3 H6 L8,5 H15 V13 H1 Z");
@@ -65,7 +92,7 @@ namespace Typify
 
         public void SetWorkingDirectory(string path)
         {
-            _workingDirectory = path;
+            WorkingDirectory = path;
             InitializeProjectTree();
         }
 
@@ -177,12 +204,12 @@ namespace Typify
         {
             CancelPendingSearch();
             ProjectTree.Items.Clear();
-            if (!Directory.Exists(_workingDirectory))
+            if (!Directory.Exists(WorkingDirectory))
             {
                 return;
             }
 
-            string rootPath = System.IO.Path.GetFullPath(_workingDirectory);
+            string rootPath = System.IO.Path.GetFullPath(WorkingDirectory);
             string rootName = System.IO.Path.GetFileName(rootPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
             var root = CreateDirectoryNode(rootPath, string.IsNullOrEmpty(rootName) ? rootPath : rootName);
             root.ToolTip = rootPath;

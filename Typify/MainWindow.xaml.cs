@@ -39,7 +39,7 @@ namespace Typify
         private readonly DispatcherTimer _previewTimer;
         private CancellationTokenSource _previewCancellation;
         private string _lastRequestedSource;
-        private string _workingDirectory = GetDefaultWorkingDirectory();
+        private string _workingDirectory = string.Empty;
         private string _currentSourceDirectory = string.Empty;
         private int _previewVersion;
         private bool _isClosing;
@@ -456,7 +456,7 @@ namespace Typify
             GitView.UpdateTheme(isDark);
             CommitOverlay.UpdateTheme(isDark);
             ExplorerOverlay.UpdateTheme(isDark);
-            ExplorerOverlay.SetWorkingDirectory(_workingDirectory); 
+            ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
         }
 
         private void SetThemeBrush(string key, string color)
@@ -602,7 +602,7 @@ namespace Typify
                 AddExtension = true,
                 OverwritePrompt = true,
                 InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory,
-                FileName = _workingDirectory == "" ?  ".pdf" : ""
+                FileName = _workingDirectory == "" ? ".pdf" : ""
             };
             if (saveDialog.ShowDialog(this) != true) return;
 
@@ -686,6 +686,71 @@ namespace Typify
             if (backslashes > 0) result.Append('\\', backslashes * 2);
             result.Append('"');
             return result.ToString();
+        }
+
+        private void FileMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            switch (((MenuItem)sender).Tag as string)
+            {
+                case "New":
+                    Editor.Text = string.Empty;
+                    StatusText.Text = "New document created.";
+                    break;
+                case "Open":
+                    var openDialog = new OpenFileDialog
+                    {
+                        Title = "Open Typst file",
+                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
+                        DefaultExt = ".typ",
+                        Multiselect = false,
+                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
+                    };
+                    if (openDialog.ShowDialog(this) == true)
+                    {
+                        try
+                        {
+                            Editor.Text = File.ReadAllText(openDialog.FileName);
+                            StatusText.Text = "Opened: " + openDialog.FileName;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(this, ex.Message, "Error opening file", MessageBoxButton.OK, MessageBoxImage.Error);
+                            StatusText.Text = "Failed to open file.";
+                        }
+                    }
+                    break;
+                case "Save":
+                case "SaveAs":
+                    var saveDialog = new SaveFileDialog
+                    {
+                        Title = "Save Typst file",
+                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
+                        DefaultExt = ".typ",
+                        AddExtension = true,
+                        OverwritePrompt = true,
+                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
+                    };
+                    if (saveDialog.ShowDialog(this) == true)
+                    {
+                        try
+                        {
+                            File.WriteAllText(saveDialog.FileName, Editor.Text);
+                            StatusText.Text = "Saved: " + saveDialog.FileName;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(this, ex.Message, "Error saving file", MessageBoxButton.OK, MessageBoxImage.Error);
+                            StatusText.Text = "Failed to save file.";
+                        }
+                    }
+                    break;
+                case "Print":
+                    
+                    break;
+                case "Preferences":
+                    // Handle preferences
+                    break;
+            }
         }
     }
 }

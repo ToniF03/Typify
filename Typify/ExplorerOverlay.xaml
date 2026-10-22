@@ -137,7 +137,7 @@
 
                     <!-- Controls: Dock/Reset, Close -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource VsIconButton}" ToolTip="Refresh" Margin="0,0,2,0" Click="RefreshExplorer_Click">
+                        <Button x:Name="RefreshButton" Style="{StaticResource VsIconButton}" ToolTip="Refresh" Margin="0,0,2,0" Click="RefreshExplorer_Click">
                             <TextBlock Text="↻" FontSize="10" Foreground="{DynamicResource VsMutedTextBrush}" />
                         </Button>
                         <Button x:Name="DockButton" Style="{StaticResource VsIconButton}" ToolTip="Dock to left edge"
@@ -158,14 +158,14 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="SearchTextBox" Grid.Column="0" Style="{DynamicResource VsSearchTextBox}" Margin="4,0,0,0" TextChanged="SearchTextBox_TextChanged" />
-                    <Button Grid.Column="1" Style="{StaticResource VsIconButton}" ToolTip="Search" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <Button x:Name="SearchButton" Grid.Column="1" Style="{StaticResource VsIconButton}" ToolTip="Search" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
                         <TextBlock Text="🔍" FontSize="10" Foreground="{DynamicResource VsMutedTextBrush}" />
                     </Button>
                 </Grid>
             </Border>
 
             <TreeView x:Name="ProjectTree" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" Margin="10, 8" />
-            <StackPanel Grid.Row="2" Margin="10,8" VerticalAlignment="Center" Visibility="Collapsed">
+            <StackPanel x:Name="OpenFilePanel" Grid.Row="2" Margin="10,8" VerticalAlignment="Center" Visibility="Collapsed">
                 <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,8">There is currently no working directory selected.</TextBlock>
                 <Button>Open a Working Directory</Button>
             </StackPanel>

@@ -16,6 +16,7 @@ namespace Typify
 
         private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (WorkingDirectory == string.Empty) return;
             CancelPendingSearch();
             string searchText = SearchTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(searchText))
@@ -25,7 +26,7 @@ namespace Typify
             }
 
             ProjectTree.Items.Clear();
-            string rootPath = Path.GetFullPath(_workingDirectory);
+            string rootPath = Path.GetFullPath(WorkingDirectory);
             string rootName = Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             var cancellation = new CancellationTokenSource();
             _searchCancellation = cancellation;

@@ -411,19 +411,19 @@
                         PreviewMouseLeftButtonDown="TopMenuItem_PreviewMouseLeftButtonDown">
                     <Border.ContextMenu>
                         <ContextMenu Style="{StaticResource TopMenuContextMenuStyle}">
-                            <MenuItem Header="New" Style="{StaticResource TopMenuContextMenuItemStyle}" />
-                            <MenuItem Header="Open" Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <MenuItem Header="New" Tag="New" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click" />
+                            <MenuItem Header="Open" Tag="Open" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click" />
                             <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
-                            <MenuItem Header="Save" Style="{StaticResource TopMenuContextMenuItemStyle}">
+                            <MenuItem Header="Save" Tag="Save" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click" >
                                 <MenuItem.Icon>
                                     <Path Data="{x:Static typify:MainWindow.SaveGeometry}"
                                           Fill="{DynamicResource TextBrush}" Width="14" Height="14"
                                           Stretch="Uniform" />
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="Save As..." Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <MenuItem Header="Save As..." Tag="SaveAs" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click" />
                             <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
-                            <MenuItem Header="Print" Style="{StaticResource TopMenuContextMenuItemStyle}" >
+                            <MenuItem Header="Print" Tag="Print" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click" >
                                 <MenuItem.Icon>
                                     <Path Data="{x:Static typify:MainWindow.PrintGeometry}"
                                           Fill="{DynamicResource TextBrush}" Width="14" Height="14"
@@ -433,7 +433,7 @@
                             <MenuItem Header="Export PDF..." Style="{StaticResource TopMenuContextMenuItemStyle}"
                                       Click="ExportPdf_Click" />
                             <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
-                            <MenuItem Header="Preferences" Style="{StaticResource TopMenuContextMenuItemStyle}" />
+                            <MenuItem Header="Preferences" Tag="Preferences" Style="{StaticResource TopMenuContextMenuItemStyle}" Click="FileMenuItem_Click"/>
                             <Separator Style="{StaticResource TopMenuSeparatorStyle}" />
                             <MenuItem Header="Exit" Style="{StaticResource TopMenuContextMenuItemStyle}"
                                       Click="CloseWindowButton_Click" />
