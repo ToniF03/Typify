@@ -34,6 +34,92 @@
         <SolidColorBrush x:Key="VsSuccessBrush" Color="#89D185" />
         <SolidColorBrush x:Key="VsBannerBackgroundBrush" Color="#1C2D42" />
         <SolidColorBrush x:Key="VsBannerTextBrush" Color="#9CDCFE" />
+        <Geometry x:Key="TreeChevronRightGeometry">M4,2 L8,6 L4,10</Geometry>
+        <Geometry x:Key="TreeChevronDownGeometry">M2,4 L6,8 L10,4</Geometry>
+
+        <Style x:Key="ExplorerTreeExpanderStyle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ClickMode" Value="Press" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Width="16" Height="20" Background="Transparent">
+                            <Path x:Name="Chevron" Data="{StaticResource TreeChevronRightGeometry}"
+                                  Stroke="{DynamicResource VsMutedTextBrush}" StrokeThickness="1.4"
+                                  StrokeLineJoin="Round" HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chevron" Property="Data"
+                                        Value="{StaticResource TreeChevronDownGeometry}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chevron" Property="Stroke"
+                                        Value="{DynamicResource VsTextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Chevron" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ExplorerTreeViewItemStyle" TargetType="TreeViewItem">
+            <Setter Property="Foreground" Value="{DynamicResource VsTextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ToggleButton x:Name="Expander" Grid.Row="0" Grid.Column="0"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                          Style="{StaticResource ExplorerTreeExpanderStyle}"
+                                          Visibility="Collapsed" />
+                            <Border x:Name="HeaderBorder" Grid.Row="0" Grid.Column="1"
+                                    Background="{TemplateBinding Background}" Padding="4,2"
+                                    CornerRadius="2">
+                                <ContentPresenter x:Name="PART_Header" ContentSource="Header"
+                                                  HorizontalAlignment="Stretch"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Grid.Column="1"
+                                            Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background"
+                                        Value="{DynamicResource VsListHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background"
+                                        Value="{DynamicResource VsListSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource VsMutedTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- Icon Button Style -->
         <Style x:Key="VsIconButton" TargetType="Button">
@@ -164,7 +250,9 @@
                 </Grid>
             </Border>
 
-            <TreeView x:Name="ProjectTree" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" Margin="10, 8" />
+            <TreeView x:Name="ProjectTree" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Background="Transparent" Margin="10, 8"
+                      ItemContainerStyle="{StaticResource ExplorerTreeViewItemStyle}" />
             <StackPanel x:Name="OpenFilePanel" Grid.Row="2" Margin="10,8" VerticalAlignment="Center" Visibility="Collapsed">
                 <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,8">There is currently no working directory selected.</TextBlock>
                 <Button>Open a Working Directory</Button>
