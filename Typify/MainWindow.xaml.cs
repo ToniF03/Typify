@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Markup;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -688,7 +690,7 @@ namespace Typify
             return result.ToString();
         }
 
-        private void FileMenuItem_Click(object sender, RoutedEventArgs e)
+        private async void FileMenuItem_Click(object sender, RoutedEventArgs e)
         {
             switch (((MenuItem)sender).Tag as string)
             {
@@ -745,11 +747,66 @@ namespace Typify
                     }
                     break;
                 case "Print":
-                    
+                    await PrintDocumentAsync();
                     break;
                 case "Preferences":
                     // Handle preferences
                     break;
+            }
+        }
+
+        private async Task PrintDocumentAsync()
+        {
+            var printDialog = new PrintDialog();
+            if (printDialog.ShowDialog() != true) return;
+
+            StatusText.Text = "Preparing document for printing…";
+            try
+            {
+                TypstPreviewResult result = await LiveTypstPreview.CompileAsync(
+                    Editor.Text, _workingDirectory, _currentSourceDirectory, CancellationToken.None, 300);
+
+                if (result.ExitCode != 0 || result.Pages == null || result.Pages.Count == 0)
+                {
+                    string details = string.IsNullOrWhiteSpace(result.Diagnostics)
+                        ? "Typst did not produce any pages to print."
+                        : result.Diagnostics;
+                    StatusText.Text = "Printing failed";
+                    MessageBox.Show(this, details, "Print error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                double pageWidth = printDialog.PrintableAreaWidth;
+                double pageHeight = printDialog.PrintableAreaHeight;
+                var document = new FixedDocument();
+                document.DocumentPaginator.PageSize = new Size(pageWidth, pageHeight);
+
+                foreach (BitmapSource page in result.Pages)
+                {
+                    var fixedPage = new FixedPage { Width = pageWidth, Height = pageHeight };
+                    var image = new Image
+                    {
+                        Source = page,
+                        Stretch = Stretch.Uniform,
+                        Width = pageWidth,
+                        Height = pageHeight
+                    };
+                    FixedPage.SetLeft(image, 0);
+                    FixedPage.SetTop(image, 0);
+                    fixedPage.Children.Add(image);
+
+                    var pageContent = new PageContent();
+                    ((IAddChild)pageContent).AddChild(fixedPage);
+                    document.Pages.Add(pageContent);
+                }
+
+                printDialog.PrintDocument(document.DocumentPaginator, "Typify document");
+                StatusText.Text = "Document sent to printer.";
+            }
+            catch (Exception exception)
+            {
+                StatusText.Text = "Printing failed";
+                MessageBox.Show(this, exception.Message, "Print error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

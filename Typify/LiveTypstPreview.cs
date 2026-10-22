@@ -24,7 +24,8 @@ namespace Typify
         private const int PreviewPpi = 72;
 
         internal static async Task<TypstPreviewResult> CompileAsync(
-            string source, string workingDirectory, string sourceDirectory, CancellationToken cancellationToken)
+            string source, string workingDirectory, string sourceDirectory, CancellationToken cancellationToken,
+            int ppi = PreviewPpi)
         {
             string runDirectory = Path.Combine(Path.GetTempPath(), "Typify", "Preview-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(runDirectory);
@@ -50,7 +51,7 @@ namespace Typify
                 {
                     FileName = "typst",
                     Arguments = "compile --root " + QuoteArgument(rootDirectory) +
-                        " --format png --ppi " + PreviewPpi + " --diagnostic-format short " +
+                        " --format png --ppi " + ppi + " --diagnostic-format short " +
                         QuoteArgument(inputPath) + " " + QuoteArgument(outputPattern),
                     WorkingDirectory = rootDirectory,
                     UseShellExecute = false,
