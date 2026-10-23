@@ -76,7 +76,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ExplorerOverlay.Search.cs" >
+    <Compile Include="ExplorerOverlay.Search.cs">
       <DependentUpon>ExplorerOverlay.xaml</DependentUpon>
     </Compile>
     <Compile Include="ExplorerOverlay.xaml.cs">

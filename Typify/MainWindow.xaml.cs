@@ -720,6 +720,7 @@ namespace Typify
                         try
                         {
                             File.WriteAllText(saveDialog.FileName, Editor.Text);
+                            UpdateSourceContextForFile(saveDialog.FileName);
                             StatusText.Text = "Saved: " + saveDialog.FileName;
                         }
                         catch (Exception ex)
@@ -744,11 +745,24 @@ namespace Typify
             OpenTypstFile(e.FilePath);
         }
 
+        private void UpdateSourceContextForFile(string filePath)
+        {
+            string fullPath = Path.GetFullPath(filePath);
+            string sourceDirectory = Path.GetDirectoryName(fullPath) ?? string.Empty;
+            _currentSourceDirectory = sourceDirectory;
+            if (!string.IsNullOrWhiteSpace(sourceDirectory))
+            {
+                _workingDirectory = sourceDirectory;
+                ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
+            }
+        }
+
         private void OpenTypstFile(string filePath)
         {
             try
             {
                 Editor.Text = File.ReadAllText(filePath);
+                UpdateSourceContextForFile(filePath);
                 StatusText.Text = "Opened: " + filePath;
             }
             catch (Exception ex)

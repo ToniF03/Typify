@@ -33,11 +33,14 @@ namespace Typify
 
             try
             {
-                string rootDirectory = string.IsNullOrWhiteSpace(workingDirectory)
-                    ? runDirectory
-                    : Path.GetFullPath(workingDirectory);
+                string rootDirectory = !string.IsNullOrWhiteSpace(workingDirectory)
+                    ? Path.GetFullPath(workingDirectory)
+                    : !string.IsNullOrWhiteSpace(sourceDirectory)
+                        ? Path.GetFullPath(sourceDirectory)
+                        : runDirectory;
                 if (!Directory.Exists(rootDirectory))
                     throw new DirectoryNotFoundException("Working directory not found: " + rootDirectory);
+
                 string inputDirectory = string.IsNullOrWhiteSpace(sourceDirectory)
                     ? rootDirectory
                     : Path.GetFullPath(sourceDirectory);

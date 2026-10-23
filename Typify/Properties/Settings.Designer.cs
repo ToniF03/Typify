@@ -34,5 +34,16 @@ namespace Typify.Properties {
                 this["IsDarkTheme"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.Collections.Specialized.StringCollection WorkSpaces {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["WorkSpaces"]));
+            }
+            set {
+                this["WorkSpaces"] = value;
+            }
+        }
     }
 }
