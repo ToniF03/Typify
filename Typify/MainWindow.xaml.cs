@@ -442,6 +442,12 @@ namespace Typify
 
         private void LeftGitChangesTab_MouseLeave(object sender, MouseEventArgs e)
         {
+            if  (((Border)sender).Name == "LeftExplorerTab")
+            {
+                if (!ExplorerOverlay.IsOpen)
+                    LeftExplorerTab.Background = Brushes.Transparent;
+                return;
+            }
             UpdateLeftTabState();
         }
 

@@ -38,7 +38,7 @@
         <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#E5E5E5" />
         <SolidColorBrush x:Key="WindowCaptionButtonHoverBrush" Color="#E0E0E0" />
         <SolidColorBrush x:Key="WindowCloseButtonHoverBrush" Color="#C42B1C" />
-
+ 
         <Style x:Key="TopMenuItemStyle" TargetType="Border">
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Margin" Value="2,0" />
@@ -609,6 +609,7 @@
                     <Border x:Name="LeftExplorerTab" CornerRadius="3" Margin="2,0,2,0" Padding="3,10"
         Cursor="Hand" ToolTip="Explorer"
         MouseEnter="LeftGitChangesTab_MouseEnter"
+                            MouseLeave="LeftGitChangesTab_MouseLeave"
                             MouseLeftButtonDown="LeftGitChangesTab_MouseLeftButtonDown"
         Background="Transparent">
                         <StackPanel HorizontalAlignment="Center">
