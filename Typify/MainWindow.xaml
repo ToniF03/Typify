@@ -284,26 +284,54 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style TargetType="TabControl">
+        <Style x:Key="MainTabsStyle" TargetType="TabControl">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid ClipToBounds="True">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
+                                <TabPanel IsItemsHost="True" Margin="6,0,0,0" Background="Transparent" />
+                            </Border>
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBackgroundBrush}">
+                                <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="Padding" Value="12,8" />
+        <Style x:Key="MainTabItemStyle" TargetType="TabItem">
+            <Setter Property="Padding" Value="10,4" />
             <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Margin" Value="0,2,2,0" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabChrome" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter ContentSource="Header" />
+                        <Border x:Name="TabChrome"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="4,4,0,0"
+                                MinHeight="24">
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" HorizontalAlignment="Left" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-                                <Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="TabChrome" Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
+                                <Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                <Setter TargetName="TabChrome" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -530,8 +558,9 @@
                                           Stretch="Uniform" />
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Style="{StaticResource TopMenuContextMenuItemStyle}">
-                                <MenuItem.Header>Toggle Git Window</MenuItem.Header>
+                            <MenuItem Style="{StaticResource TopMenuContextMenuItemStyle}"
+                                      Click="OpenGitTabMenuItem_Click">
+                                <MenuItem.Header>Open Git Tab</MenuItem.Header>
                                 <MenuItem.Icon>
                                     <Path Data="{x:Static typify:MainWindow.GitGeometry}"
                                           Fill="{DynamicResource GitBrush}" Width="14" Height="14"
@@ -648,64 +677,11 @@
                               Background="Transparent" Cursor="SizeWE"
                               ResizeBehavior="PreviousAndNext" Visibility="Collapsed" />
 
-                <TabControl x:Name="MainTabs" Grid.Column="2" Margin="10,6,10,6">
-                    <TabItem Header="Workspace">
-                        <Grid Margin="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="EditorColumn" Width="*" MinWidth="240" />
-                                <ColumnDefinition x:Name="PreviewSplitterColumn" Width="0" />
-                                <ColumnDefinition x:Name="PreviewColumn" Width="0" />
-                            </Grid.ColumnDefinitions>
-
-                            <Grid Grid.Column="0" Margin="8,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <controls:TypifyTextbox x:Name="Editor" Grid.Row="1" ShowBorder="True"
-                                        IsHorizontalScrollEnabled="True"
-                                        Background="{DynamicResource EditorBackgroundBrush}"
-                                        Foreground="{DynamicResource EditorTextBrush}"
-                                        BorderBrush="{DynamicResource BorderBrush}"
-                                        CaretBrush="{DynamicResource TextBrush}"
-                                        Text="= Hello, Typst&#x0a;&#x0a;Write Typst source here.&#x0a;&#x0a;#let answer = 42&#x0a;The answer is *#answer*." />
-                            </Grid>
-                            <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Width="6"
-                                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                          Background="Transparent" ResizeBehavior="PreviousAndNext"
-                                          Visibility="Collapsed" />
-                            <Border x:Name="PreviewPanel" Grid.Column="2" Margin="8,0,0,0" Padding="12"
-                                    Background="{DynamicResource SurfaceBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
-                                    Visibility="Collapsed">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
-                               Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,7" />
-                                    <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Live preview is off"
-                               Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,10" />
-                                    <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">
-                                        <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
-                                    </ScrollViewer>
-                                    <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,10,0,0"
-                             IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource DiagnosticTextBrush}"
-                             Background="{DynamicResource DiagnosticBackgroundBrush}"
-                             BorderBrush="{DynamicResource BorderBrush}" Visibility="Collapsed" />
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </TabItem>
-                    <TabItem Header="Git">
-                        <typify:GitTabView x:Name="GitView" />
-                    </TabItem>
-                </TabControl>
+                <TabControl x:Name="MainTabs" Grid.Column="2" Margin="10,6,10,6"
+                            Style="{StaticResource MainTabsStyle}"
+                            ItemContainerStyle="{StaticResource MainTabItemStyle}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch" />
 
             </Grid>
             <!-- Overlapping Git Changes Window (Docked on the left, overlapping MainTabs) -->

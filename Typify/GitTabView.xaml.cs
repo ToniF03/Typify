@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -219,14 +219,19 @@ namespace Typify
 
         private async void OpenRepository_Click(object sender, RoutedEventArgs e)
         {
-            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            var dialog = new NativeFolderDialog
             {
-                dialog.Description = "Select a Git repository or project folder";
-                dialog.SelectedPath = Directory.Exists(RepositoryPathBox.Text) ? RepositoryPathBox.Text : Environment.CurrentDirectory;
-                if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-                SetRepositoryPath(dialog.SelectedPath);
-                await RefreshAllAsync();
-            }
+                Title = "Select a Git repository or project folder",
+                InitialDirectory = Directory.Exists(RepositoryPathBox.Text)
+                    ? RepositoryPathBox.Text
+                    : Environment.CurrentDirectory
+            };
+
+            if (!dialog.ShowDialog(Window.GetWindow(this)))
+                return;
+
+            SetRepositoryPath(dialog.SelectedPath);
+            await RefreshAllAsync();
         }
 
         private async void InitializeRepository_Click(object sender, RoutedEventArgs e)

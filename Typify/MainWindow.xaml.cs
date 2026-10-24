@@ -37,14 +37,18 @@ namespace Typify
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr windowHandle, int command);
 
-        private const int PreviewDebounceMilliseconds = 50;
-        private readonly DispatcherTimer _previewTimer;
-        private CancellationTokenSource _previewCancellation;
-        private string _lastRequestedSource;
         private string _workingDirectory = string.Empty;
-        private string _currentSourceDirectory = string.Empty;
-        private int _previewVersion;
+        private const string GitTabMarker = "GitTab";
+        private int _untitledDocumentIndex = 1;
         private bool _isClosing;
+
+        private sealed class DocumentTabState
+        {
+            public string FilePath;
+            public string UntitledName;
+            public TypifyDocumentView View;
+            public TabItem Tab;
+        }
         private bool _isDarkTheme
         {
             get => Properties.Settings.Default.IsDarkTheme;
@@ -67,17 +71,215 @@ namespace Typify
 
         public MainWindow()
         {
-            _previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(PreviewDebounceMilliseconds) };
-            _previewTimer.Tick += PreviewTimer_Tick;
             InitializeComponent();
             UpdateWindowStateControls();
-            Editor.TextChanged += Editor_TextChanged;
             KeyDown += MainWindow_KeyDown;
+            MainTabs.SelectionChanged += MainTabs_SelectionChanged;
             ExplorerOverlay.FileOpenRequested += ExplorerOverlay_FileOpenRequested;
             ExplorerOverlay.DockToggleRequested += ExplorerOverlay_DockToggleRequested;
             ExplorerOverlay.CloseDockedRequested += ExplorerOverlay_CloseDockedRequested;
             CommitOverlay.DockToggleRequested += CommitOverlay_DockToggleRequested;
             CommitOverlay.CloseDockedRequested += CommitOverlay_CloseDockedRequested;
+            CreateAndSelectDocumentTab(null, "= Hello, Typst\n\nWrite Typst source here.\n\n#let answer = 42\nThe answer is *#answer*.");
+        }
+
+        private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var state = GetActiveDocumentState();
+            if (state == null) return;
+
+            string sourceDirectory = state.FilePath != null
+                ? Path.GetDirectoryName(state.FilePath) ?? string.Empty
+                : _workingDirectory;
+            state.View.SetSourceContext(_workingDirectory, sourceDirectory);
+            state.View.FocusEditor();
+        }
+
+        private DocumentTabState GetActiveDocumentState()
+        {
+            var tab = MainTabs.SelectedItem as TabItem;
+            return tab != null ? tab.Tag as DocumentTabState : null;
+        }
+
+        private TypifyDocumentView GetActiveDocumentView()
+        {
+            DocumentTabState state = GetActiveDocumentState();
+            return state != null ? state.View : null;
+        }
+
+        private GitTabView GetOpenGitTabView()
+        {
+            TabItem gitTab = MainTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag as string, GitTabMarker, StringComparison.Ordinal));
+            return gitTab != null ? gitTab.Content as GitTabView : null;
+        }
+
+        private async Task OpenOrActivateGitTabAsync()
+        {
+            TabItem gitTab = MainTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag as string, GitTabMarker, StringComparison.Ordinal));
+            if (gitTab != null)
+            {
+                MainTabs.SelectedItem = gitTab;
+                return;
+            }
+
+            var gitView = new GitTabView();
+            gitView.RepositoryRefreshed += GitTabView_RepositoryRefreshed;
+            gitView.UpdateTheme(_isDarkTheme);
+
+            gitTab = new TabItem
+            {
+                Header = "Git",
+                Content = gitView,
+                Tag = GitTabMarker
+            };
+
+            MainTabs.Items.Add(gitTab);
+            MainTabs.SelectedItem = gitTab;
+            await gitView.InitializeAsync(_workingDirectory, _isDarkTheme);
+        }
+
+        private async void OpenGitTabMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            await OpenOrActivateGitTabAsync();
+        }
+
+        private TabItem FindDocumentTabByPath(string fullPath)
+        {
+            return MainTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item =>
+                {
+                    var state = item.Tag as DocumentTabState;
+                    return state != null && state.FilePath != null &&
+                           string.Equals(state.FilePath, fullPath, StringComparison.OrdinalIgnoreCase);
+                });
+        }
+
+        private void CreateAndSelectDocumentTab(string filePath, string initialText)
+        {
+            string fullPath = string.IsNullOrWhiteSpace(filePath) ? null : Path.GetFullPath(filePath);
+            if (fullPath != null)
+            {
+                TabItem existingTab = FindDocumentTabByPath(fullPath);
+                if (existingTab != null)
+                {
+                    MainTabs.SelectedItem = existingTab;
+                    return;
+                }
+            }
+
+            var view = new TypifyDocumentView();
+            view.SetDarkTheme(_isDarkTheme);
+            view.SetLivePreviewEnabled(_isLivePreviewEnabled);
+
+            var tab = new TabItem();
+            var state = new DocumentTabState
+            {
+                FilePath = fullPath,
+                UntitledName = fullPath == null ? "Untitled " + _untitledDocumentIndex++ : null,
+                View = view,
+                Tab = tab
+            };
+
+            tab.Tag = state;
+            tab.Content = view;
+            tab.Header = CreateDocumentTabHeader(state);
+
+            if (fullPath != null)
+            {
+                view.DocumentText = File.ReadAllText(fullPath);
+                string sourceDirectory = Path.GetDirectoryName(fullPath) ?? string.Empty;
+                _workingDirectory = sourceDirectory;
+                ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
+                view.SetSourceContext(_workingDirectory, sourceDirectory);
+            }
+            else
+            {
+                view.DocumentText = initialText ?? string.Empty;
+                view.SetSourceContext(_workingDirectory, _workingDirectory);
+            }
+
+            MainTabs.Items.Add(tab);
+            MainTabs.SelectedItem = tab;
+            view.FocusEditor();
+        }
+
+        private object CreateDocumentTabHeader(DocumentTabState state)
+        {
+            var dock = new DockPanel { LastChildFill = false };
+            var title = new TextBlock
+            {
+                Text = GetDocumentTitle(state),
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var closeButton = new Button
+            {
+                Content = "×",
+                Width = 16,
+                Height = 16,
+                Padding = new Thickness(0),
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                Foreground = Brushes.Gray,
+                Cursor = Cursors.Hand,
+                Tag = state.Tab,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            closeButton.Click += DocumentTabCloseButton_Click;
+
+            DockPanel.SetDock(closeButton, Dock.Right);
+            dock.Children.Add(closeButton);
+            dock.Children.Add(title);
+            return dock;
+        }
+
+        private string GetDocumentTitle(DocumentTabState state)
+        {
+            if (!string.IsNullOrWhiteSpace(state.FilePath))
+                return Path.GetFileName(state.FilePath);
+            return string.IsNullOrWhiteSpace(state.UntitledName) ? "Untitled" : state.UntitledName;
+        }
+
+        private void RefreshDocumentTabHeader(DocumentTabState state)
+        {
+            state.Tab.Header = CreateDocumentTabHeader(state);
+        }
+
+        private void DocumentTabCloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var tab = button != null ? button.Tag as TabItem : null;
+            if (tab == null) return;
+
+            var state = tab.Tag as DocumentTabState;
+            if (state != null) state.View.Shutdown();
+            MainTabs.Items.Remove(tab);
+            if (MainTabs.Items.Count == 0)
+                CreateAndSelectDocumentTab(null, string.Empty);
+        }
+
+        private bool SaveDocumentToPath(DocumentTabState state, string filePath)
+        {
+            try
+            {
+                File.WriteAllText(filePath, state.View.DocumentText);
+                state.FilePath = Path.GetFullPath(filePath);
+                string sourceDirectory = Path.GetDirectoryName(state.FilePath) ?? string.Empty;
+                _workingDirectory = sourceDirectory;
+                ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
+                state.View.SetSourceContext(_workingDirectory, sourceDirectory);
+                RefreshDocumentTabHeader(state);
+                StatusText.Text = "Saved: " + state.FilePath;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Error saving file", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusText.Text = "Failed to save file.";
+                return false;
+            }
         }
 
         private void ExplorerOverlay_DockToggleRequested(object sender, EventArgs e)
@@ -203,12 +405,10 @@ namespace Typify
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             ApplyTheme(_isDarkTheme);
-            await GitView.InitializeAsync(_workingDirectory, _isDarkTheme);
             await CommitOverlay.InitializeAsync(_workingDirectory, _isDarkTheme);
             CommitOverlay.CommitCompleted += CommitOverlay_CommitCompleted;
             CommitOverlay.VisibilityChanged += (s, ev) => UpdateLeftTabState();
             CommitOverlay.StatusUpdated += (s, ev) => UpdateLeftTabState();
-            GitView.RepositoryRefreshed += GitView_RepositoryRefreshed;
             UpdateLeftTabState();
         }
 
@@ -259,12 +459,15 @@ namespace Typify
 
         private async void CommitOverlay_CommitCompleted(object sender, EventArgs e)
         {
-            await GitView.RefreshAllAsync();
+            GitTabView gitTabView = GetOpenGitTabView();
+            if (gitTabView != null)
+                await gitTabView.RefreshAllAsync();
+
             StatusText.Text = "Commit completed successfully.";
             UpdateLeftTabState();
         }
 
-        private async void GitView_RepositoryRefreshed(object sender, EventArgs e)
+        private async void GitTabView_RepositoryRefreshed(object sender, EventArgs e)
         {
             await CommitOverlay.RefreshStatusAsync();
             UpdateLeftTabState();
@@ -291,26 +494,12 @@ namespace Typify
         private void LivePreviewButton_Click(object sender, RoutedEventArgs e)
         {
             _isLivePreviewEnabled = !_isLivePreviewEnabled;
-            PreviewPanel.Visibility = _isLivePreviewEnabled ? Visibility.Visible : Visibility.Collapsed;
-            PreviewSplitter.Visibility = _isLivePreviewEnabled ? Visibility.Visible : Visibility.Collapsed;
-            PreviewSplitterColumn.Width = _isLivePreviewEnabled ? new GridLength(6) : new GridLength(0);
-            PreviewColumn.Width = _isLivePreviewEnabled
-                ? new GridLength(1, GridUnitType.Star)
-                : new GridLength(0);
-
-            if (_isLivePreviewEnabled)
+            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
             {
-                QueuePreviewCompile();
-                return;
+                var state = tab.Tag as DocumentTabState;
+                if (state != null)
+                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
             }
-
-            _previewTimer.Stop();
-            _previewVersion++;
-            if (_previewCancellation != null) _previewCancellation.Cancel();
-            PageHost.Children.Clear();
-            PreviewDiagnostics.Clear();
-            PreviewDiagnostics.Visibility = Visibility.Collapsed;
-            PreviewStatus.Text = "Live preview is off";
         }
 
         private void GitChangesMenuItem_Click(object sender, RoutedEventArgs e)
@@ -332,28 +521,31 @@ namespace Typify
 
         private void EditorEditCommand_Click(object sender, RoutedEventArgs e)
         {
+            TypifyDocumentView activeView = GetActiveDocumentView();
+            if (activeView == null) return;
+
             var menuItem = sender as MenuItem;
             string command = menuItem?.Tag as string;
 
             switch (command)
             {
                 case "Undo":
-                    if (Editor.CanUndo) Editor.Undo();
+                    activeView.Undo();
                     break;
                 case "Redo":
-                    if (Editor.CanRedo) Editor.Redo();
+                    activeView.Redo();
                     break;
                 case "Cut":
-                    Editor.Cut();
+                    activeView.Cut();
                     break;
                 case "Copy":
-                    Editor.Copy();
+                    activeView.Copy();
                     break;
                 case "Paste":
-                    Editor.Paste();
+                    activeView.Paste();
                     break;
                 case "SelectAll":
-                    Editor.SelectAll();
+                    activeView.SelectAll();
                     break;
             }
         }
@@ -446,8 +638,17 @@ namespace Typify
             SetThemeBrush("PreviewPageBorderBrush", isDark ? "#2B2B2B" : "#E5E5E5");
             SetThemeBrush("WindowCaptionButtonHoverBrush", isDark ? "#333333" : "#E0E0E0");
 
-            Editor.IsDarkTheme = isDark;
-            GitView.UpdateTheme(isDark);
+            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
+            {
+                var document = tab.Tag as DocumentTabState;
+                if (document != null)
+                    document.View.SetDarkTheme(isDark);
+            }
+
+            GitTabView gitTabView = GetOpenGitTabView();
+            if (gitTabView != null)
+                gitTabView.UpdateTheme(isDark);
+
             CommitOverlay.UpdateTheme(isDark);
             ExplorerOverlay.UpdateTheme(isDark);
             ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
@@ -463,130 +664,25 @@ namespace Typify
         private void MainWindow_Closed(object sender, EventArgs e)
         {
             _isClosing = true;
-            _previewTimer.Stop();
-            if (_previewCancellation != null) _previewCancellation.Cancel();
-        }
-
-        private void Editor_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!_isLivePreviewEnabled) return;
-            string source = Editor.Text ?? string.Empty;
-            if (string.Equals(source, _lastRequestedSource, StringComparison.Ordinal)) return;
-            QueuePreviewCompile();
-        }
-
-        private void QueuePreviewCompile()
-        {
-            if (_isClosing || !_isLivePreviewEnabled) return;
-            _lastRequestedSource = Editor.Text ?? string.Empty;
-            _previewVersion++;
-            if (_previewCancellation != null) _previewCancellation.Cancel();
-            _previewTimer.Stop();
-            _previewTimer.Start();
-            PreviewStatus.Text = "Changes detected · updating preview…";
-        }
-
-        private async void PreviewTimer_Tick(object sender, EventArgs e)
-        {
-            _previewTimer.Stop();
-            if (_isClosing || !_isLivePreviewEnabled) return;
-            int version = _previewVersion;
-            var cancellation = new CancellationTokenSource();
-            _previewCancellation = cancellation;
-            try
+            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
             {
-                TypstPreviewResult result = await LiveTypstPreview.CompileAsync(
-                    _lastRequestedSource, _workingDirectory, _currentSourceDirectory, cancellation.Token);
-                if (_isClosing || version != _previewVersion || result.WasCancelled) return;
-
-                if (result.ExitCode == 0 && result.Pages != null && result.Pages.Count > 0)
-                {
-                    ShowPreviewPages(result.Pages);
-                    PreviewDiagnostics.Clear();
-                    PreviewDiagnostics.Visibility = Visibility.Collapsed;
-                    PreviewStatus.Text = result.Pages.Count == 1
-                        ? "Up to date · 1 page"
-                        : "Up to date · " + result.Pages.Count + " pages";
-                }
-                else
-                {
-                    PreviewDiagnostics.Text = string.IsNullOrWhiteSpace(result.Diagnostics)
-                        ? "Typst did not produce any preview pages."
-                        : result.Diagnostics;
-                    PreviewDiagnostics.Visibility = Visibility.Visible;
-                    PreviewStatus.Text = PageHost.Children.Count == 0
-                        ? "Compilation failed"
-                        : "Compilation failed · showing the last successful preview";
-                }
+                var state = tab.Tag as DocumentTabState;
+                if (state != null)
+                    state.View.Shutdown();
             }
-            catch (Exception exception)
-            {
-                if (_isClosing || version != _previewVersion) return;
-                PreviewDiagnostics.Text = exception.Message;
-                PreviewDiagnostics.Visibility = Visibility.Visible;
-                PreviewStatus.Text = "Could not update preview";
-            }
-            finally
-            {
-                if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null;
-                cancellation.Dispose();
-            }
-        }
-
-        private void ShowPreviewPages(System.Collections.Generic.IList<BitmapSource> pages)
-        {
-            PageHost.Children.Clear();
-            for (int page = 0; page < pages.Count; page++)
-            {
-                var image = new Image
-                {
-                    Source = pages[page],
-                    Stretch = Stretch.Uniform,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Width = GetPreviewPageWidth()
-                };
-                var sheet = new Border
-                {
-                    Child = image,
-                    Background = Brushes.White,
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(6),
-                    Margin = new Thickness(8, 4, 8, 12)
-                };
-                sheet.SetResourceReference(Border.BorderBrushProperty, "PreviewPageBorderBrush");
-                PageHost.Children.Add(sheet);
-            }
-            PreviewScroll.ScrollToTop();
-        }
-
-        private void PreviewScroll_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            double pageWidth = GetPreviewPageWidth();
-            foreach (Border sheet in PageHost.Children)
-            {
-                var image = sheet.Child as Image;
-                if (image != null) image.Width = pageWidth;
-            }
-        }
-
-        private double GetPreviewPageWidth()
-        {
-            double available = PreviewScroll.ViewportWidth;
-            if (double.IsNaN(available) || double.IsInfinity(available) || available <= 0)
-                available = PreviewScroll.ActualWidth;
-            return Math.Max(180, available - 36);
         }
 
         private async void ExportPdf_Click(object sender, RoutedEventArgs e)
         {
-            string tempFile = Path.Combine(Path.GetTempPath(), "temp.typ");
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
-            File.WriteAllText(tempFile, Editor.Text);
-            FileInfo fileInfo = new FileInfo(tempFile)
-            {
-                Attributes = FileAttributes.Hidden
-            };
+            DocumentTabState activeDocument = GetActiveDocumentState();
+            if (activeDocument == null) return;
+
+            string tempFile = Path.Combine(Path.GetTempPath(), "temp-" + Guid.NewGuid().ToString("N") + ".typ");
+            File.WriteAllText(tempFile, activeDocument.View.DocumentText);
+
+            string sourceDirectory = activeDocument.FilePath != null
+                ? Path.GetDirectoryName(activeDocument.FilePath) ?? _workingDirectory
+                : _workingDirectory;
 
             var saveDialog = new SaveFileDialog
             {
@@ -606,12 +702,12 @@ namespace Typify
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "typst",
-                    Arguments = "compile --format pdf " + QuoteArgument(tempFile) + " " + QuoteArgument(saveDialog.FileName),
+                    Arguments = "compile --root " + QuoteArgument(sourceDirectory) + " --format pdf " + QuoteArgument(tempFile) + " " + QuoteArgument(saveDialog.FileName),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    WorkingDirectory = Path.GetDirectoryName(tempFile)
+                    WorkingDirectory = sourceDirectory
                 };
 
                 string standardOutput;
@@ -687,7 +783,7 @@ namespace Typify
             switch (((MenuItem)sender).Tag as string)
             {
                 case "New":
-                    Editor.Text = string.Empty;
+                    CreateAndSelectDocumentTab(null, string.Empty);
                     StatusText.Text = "New document created.";
                     break;
                 case "Open":
@@ -700,12 +796,19 @@ namespace Typify
                         InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
                     };
                     if (openDialog.ShowDialog(this) == true)
-                    {
                         OpenTypstFile(openDialog.FileName);
-                    }
                     break;
                 case "Save":
-                case "SaveAs":
+                {
+                    DocumentTabState activeDocument = GetActiveDocumentState();
+                    if (activeDocument == null) break;
+
+                    if (!string.IsNullOrWhiteSpace(activeDocument.FilePath))
+                    {
+                        SaveDocumentToPath(activeDocument, activeDocument.FilePath);
+                        break;
+                    }
+
                     var saveDialog = new SaveFileDialog
                     {
                         Title = "Save Typst file",
@@ -716,26 +819,31 @@ namespace Typify
                         InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
                     };
                     if (saveDialog.ShowDialog(this) == true)
-                    {
-                        try
-                        {
-                            File.WriteAllText(saveDialog.FileName, Editor.Text);
-                            UpdateSourceContextForFile(saveDialog.FileName);
-                            StatusText.Text = "Saved: " + saveDialog.FileName;
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(this, ex.Message, "Error saving file", MessageBoxButton.OK, MessageBoxImage.Error);
-                            StatusText.Text = "Failed to save file.";
-                        }
-                    }
-
+                        SaveDocumentToPath(activeDocument, saveDialog.FileName);
                     break;
+                }
+                case "SaveAs":
+                {
+                    DocumentTabState activeDocument = GetActiveDocumentState();
+                    if (activeDocument == null) break;
+
+                    var saveDialog = new SaveFileDialog
+                    {
+                        Title = "Save Typst file",
+                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
+                        DefaultExt = ".typ",
+                        AddExtension = true,
+                        OverwritePrompt = true,
+                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
+                    };
+                    if (saveDialog.ShowDialog(this) == true)
+                        SaveDocumentToPath(activeDocument, saveDialog.FileName);
+                    break;
+                }
                 case "Print":
                     await PrintDocumentAsync();
                     break;
                 case "Preferences":
-                    // Handle preferences
                     break;
             }
         }
@@ -745,24 +853,11 @@ namespace Typify
             OpenTypstFile(e.FilePath);
         }
 
-        private void UpdateSourceContextForFile(string filePath)
-        {
-            string fullPath = Path.GetFullPath(filePath);
-            string sourceDirectory = Path.GetDirectoryName(fullPath) ?? string.Empty;
-            _currentSourceDirectory = sourceDirectory;
-            if (!string.IsNullOrWhiteSpace(sourceDirectory))
-            {
-                _workingDirectory = sourceDirectory;
-                ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
-            }
-        }
-
         private void OpenTypstFile(string filePath)
         {
             try
             {
-                Editor.Text = File.ReadAllText(filePath);
-                UpdateSourceContextForFile(filePath);
+                CreateAndSelectDocumentTab(filePath, null);
                 StatusText.Text = "Opened: " + filePath;
             }
             catch (Exception ex)
@@ -774,14 +869,21 @@ namespace Typify
 
         private async Task PrintDocumentAsync()
         {
+            DocumentTabState activeDocument = GetActiveDocumentState();
+            if (activeDocument == null) return;
+
             var printDialog = new PrintDialog();
             if (printDialog.ShowDialog() != true) return;
+
+            string sourceDirectory = activeDocument.FilePath != null
+                ? Path.GetDirectoryName(activeDocument.FilePath) ?? _workingDirectory
+                : _workingDirectory;
 
             StatusText.Text = "Preparing document for printing…";
             try
             {
                 TypstPreviewResult result = await LiveTypstPreview.CompileAsync(
-                    Editor.Text, _workingDirectory, _currentSourceDirectory, CancellationToken.None, 300);
+                    activeDocument.View.DocumentText, _workingDirectory, sourceDirectory, CancellationToken.None, 300);
 
                 if (result.ExitCode != 0 || result.Pages == null || result.Pages.Count == 0)
                 {

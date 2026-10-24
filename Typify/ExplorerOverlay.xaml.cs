@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Media.Effects;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Win32;
 
 namespace Typify
 {
@@ -93,17 +94,17 @@ namespace Typify
 
         private void AddRootDirectory_Click(object sender, RoutedEventArgs e)
         {
-            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            var dialog = new NativeFolderDialog
             {
-                dialog.Description = "Select a folder to add to the Explorer";
-                dialog.SelectedPath = Directory.Exists(_workingDirectory)
+                Title = "Select a folder to add to the Explorer",
+                InitialDirectory = Directory.Exists(_workingDirectory)
                     ? _workingDirectory
-                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            };
 
-                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    AddRootDirectory(dialog.SelectedPath);
-                }
+            if (dialog.ShowDialog(Window.GetWindow(this)))
+            {
+                AddRootDirectory(dialog.SelectedPath);
             }
         }
         private Effect _floatingEffect;
@@ -111,6 +112,7 @@ namespace Typify
         private static readonly Geometry FolderIconGeometry = Geometry.Parse("M1,3 H6 L8,5 H15 V13 H1 Z");
         private static readonly Geometry FileIconGeometry = Geometry.Parse("M3,1 H10 L14,5 V15 H3 Z");
         private static readonly Geometry FileIconDetailGeometry = Geometry.Parse("M10,1 V5 H14 M5,8 H11 M5,11 H11");
+        private static readonly Geometry PDFFileIconGeometry = Geometry.Parse("M335.664 208.977 C344.89 189.701 356.236 179.941 369.414 179.941 C388.624 179.941 402.75 200.983 404.54 232.309 C406.76 271.377 394.542 306.259 380.974 338.701 C386.532 349.233 392.908 360.015 400 370.817 C416.06 395.265 437.556 417.349 462.44 434.989 C490.406 428.455 512.182 425.533 532.38 425.533 C551.248 425.533 567.85 428.165 583.132 433.583 C583.522 433.723 623.054 448.789 624.688 472.273 C625.008 476.703 624.248 487.789 610.454 494.973 C595.124 502.965 572.478 505.117 546.978 501.407 C516.704 497.013 485.662 485.039 456.796 466.681 C447.868 468.955 439.084 471.349 430.546 473.657 C422.478 475.865 414.612 477.993 407.044 479.917 L396.976 482.475 C368.864 489.571 339.86 496.913 312.644 506.749 C301.838 529.599 290.81 549.409 279.028 567.169 C273.174 576.005 242.314 620.059 210.25 620.059 C200.542 620.047 191.713 616.147 184.685 608.741 C178.07 601.765 174.815 593.059 175.309 583.565 C176.321 563.407 194.05 544.097 208.757 531.465 C231.206 512.149 258.143 496.415 290.932 483.441 C302.624 457.557 312.998 430.347 323.066 403.973 C331.158 382.763 339.518 360.853 348.516 339.719 C323.532 287.275 319.206 243.325 335.664 208.977 Z M369.014 210.839 C367.486 212.513 365.13 215.721 362.254 221.721 C351.04 245.129 355.22 274.123 364.19 300.379 C371.472 279.145 376.436 257.011 375.13 234.003 C374.478 222.635 371.374 214.483 369.014 210.839 Z M366.636 373.139 C361.136 386.897 355.818 400.835 350.61 414.479 C343.576 432.911 336.392 451.763 328.66 470.409 C349.006 464.207 369.606 458.999 389.754 453.901 L399.77 451.361 C407.198 449.489 414.906 447.385 422.828 445.229 C424.002 444.903 425.182 444.595 426.38 444.269 C406.524 427.441 389.172 408.003 375.368 386.979 C372.338 382.357 369.426 377.747 366.636 373.139 Z M501.468 457.411 C517.978 464.829 534.776 469.863 551.244 472.251 C566.588 474.477 580.9 474.153 590.648 471.275 C585.516 467.393 577.914 463.009 573.286 461.369 C553.75 454.447 530.91 453.127 501.468 457.411 Z M269.946 525.459 C254.147 533.875 240.264 543.265 227.982 553.827 C214.45 565.469 205.109 578.025 204.748 585.075 C204.69 586.303 204.882 587.203 206.079 588.459 C207.94 590.423 209.212 590.593 210.264 590.593 C220.955 590.593 241.765 570.061 254.489 550.885 C259.762 542.915 264.906 534.475 269.946 525.459 Z");
         private static readonly Brush FolderIconBrush = CreateIconBrush("#D6A354");
         private static readonly Brush TypstIconBrush = CreateIconBrush("#428CCB");
         private static readonly Brush PdfIconBrush = CreateIconBrush("#D75A5A");
@@ -354,6 +356,20 @@ namespace Typify
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 header.Children.Add(folderIcon);
+            }
+            else if (string.Equals(System.IO.Path.GetExtension(name), ".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfIcon = new System.Windows.Shapes.Path
+                {
+                    Data = PDFFileIconGeometry,
+                    Fill = PdfIconBrush,
+                    Width = 16,
+                    Height = 17,
+                    Stretch = Stretch.Fill,
+                    Margin = new Thickness(1, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                header.Children.Add(pdfIcon);
             }
             else
             {

@@ -1,0 +1,58 @@
+<UserControl x:Class="Typify.TypifyDocumentView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Typify.TextBox;assembly=TypifyTextbox"
+             Background="Transparent">
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="EditorColumn" Width="*" MinWidth="240" />
+            <ColumnDefinition x:Name="PreviewSplitterColumn" Width="0" />
+            <ColumnDefinition x:Name="PreviewColumn" Width="0" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="8,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <controls:TypifyTextbox x:Name="Editor" Grid.Row="1" ShowBorder="True"
+                                    IsHorizontalScrollEnabled="True"
+                                    Background="{DynamicResource EditorBackgroundBrush}"
+                                    Foreground="{DynamicResource EditorTextBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    CaretBrush="{DynamicResource TextBrush}" />
+        </Grid>
+
+        <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Width="6"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Background="Transparent" ResizeBehavior="PreviousAndNext"
+                      Visibility="Collapsed" />
+
+        <Border x:Name="PreviewPanel" Grid.Column="2" Margin="8,0,0,0" Padding="12"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="PREVIEW" FontWeight="SemiBold" FontSize="11"
+                           Foreground="{DynamicResource MutedTextBrush}" Margin="0,1,0,7" />
+                <TextBlock x:Name="PreviewStatus" Grid.Row="1" Text="Live preview is off"
+                           Foreground="{DynamicResource MutedTextBrush}" FontSize="12" Margin="0,0,0,10" />
+                <ScrollViewer x:Name="PreviewScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" SizeChanged="PreviewScroll_SizeChanged">
+                    <StackPanel x:Name="PageHost" HorizontalAlignment="Center" />
+                </ScrollViewer>
+                <TextBox x:Name="PreviewDiagnostics" Grid.Row="3" Height="110" Margin="0,10,0,0"
+                         IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                         FontFamily="Consolas" FontSize="12" Foreground="{DynamicResource DiagnosticTextBrush}"
+                         Background="{DynamicResource DiagnosticBackgroundBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}" Visibility="Collapsed" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
