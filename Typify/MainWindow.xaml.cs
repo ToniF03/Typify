@@ -48,6 +48,8 @@ namespace Typify
             public string UntitledName;
             public TypifyDocumentView View;
             public TabItem Tab;
+            public string InitialText;
+            public bool IsPlaceholderTab;
         }
         private bool _isDarkTheme
         {
@@ -156,6 +158,24 @@ namespace Typify
                 });
         }
 
+        private TabItem FindReusableUntitledDocumentTab()
+        {
+            return MainTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(item =>
+                {
+                    var state = item.Tag as DocumentTabState;
+                    if (state == null || state.FilePath != null || state.View == null)
+                        return false;
+
+                    if (state.IsPlaceholderTab)
+                        return true;
+
+                    string currentText = state.View.DocumentText ?? string.Empty;
+                    string initialText = state.InitialText ?? string.Empty;
+                    return string.Equals(currentText, initialText, StringComparison.Ordinal);
+                });
+        }
+
         private void CreateAndSelectDocumentTab(string filePath, string initialText)
         {
             string fullPath = string.IsNullOrWhiteSpace(filePath) ? null : Path.GetFullPath(filePath);
@@ -169,26 +189,64 @@ namespace Typify
                 }
             }
 
-            var view = new TypifyDocumentView();
-            view.SetDarkTheme(_isDarkTheme);
-            view.SetLivePreviewEnabled(_isLivePreviewEnabled);
-
-            var tab = new TabItem();
-            var state = new DocumentTabState
-            {
-                FilePath = fullPath,
-                UntitledName = fullPath == null ? "Untitled " + _untitledDocumentIndex++ : null,
-                View = view,
-                Tab = tab
-            };
-
-            tab.Tag = state;
-            tab.Content = view;
-            tab.Header = CreateDocumentTabHeader(state);
+            TypifyDocumentView view;
+            TabItem tab;
+            DocumentTabState state;
 
             if (fullPath != null)
             {
-                view.DocumentText = File.ReadAllText(fullPath);
+                TabItem reusableTab = FindReusableUntitledDocumentTab();
+                state = reusableTab != null ? reusableTab.Tag as DocumentTabState : null;
+                if (state != null && state.View != null)
+                {
+                    tab = reusableTab;
+                    view = state.View;
+                }
+                else
+                {
+                    view = new TypifyDocumentView();
+                    view.SetDarkTheme(_isDarkTheme);
+                    view.SetLivePreviewEnabled(_isLivePreviewEnabled);
+
+                    tab = new TabItem();
+                    state = new DocumentTabState
+                    {
+                        View = view,
+                        Tab = tab
+                    };
+
+                    tab.Tag = state;
+                    tab.Content = view;
+                    MainTabs.Items.Add(tab);
+                }
+            }
+            else
+            {
+                view = new TypifyDocumentView();
+                view.SetDarkTheme(_isDarkTheme);
+                view.SetLivePreviewEnabled(_isLivePreviewEnabled);
+
+                tab = new TabItem();
+                state = new DocumentTabState
+                {
+                    View = view,
+                    Tab = tab
+                };
+
+                tab.Tag = state;
+                tab.Content = view;
+                MainTabs.Items.Add(tab);
+            }
+
+            state.FilePath = fullPath;
+            state.UntitledName = fullPath == null ? "Untitled " + _untitledDocumentIndex++ : null;
+
+            if (fullPath != null)
+            {
+                string fileText = File.ReadAllText(fullPath);
+                view.DocumentText = fileText;
+                state.InitialText = fileText;
+                state.IsPlaceholderTab = false;
                 string sourceDirectory = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 _workingDirectory = sourceDirectory;
                 ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
@@ -196,11 +254,14 @@ namespace Typify
             }
             else
             {
-                view.DocumentText = initialText ?? string.Empty;
+                string text = initialText ?? string.Empty;
+                view.DocumentText = text;
+                state.InitialText = text;
+                state.IsPlaceholderTab = true;
                 view.SetSourceContext(_workingDirectory, _workingDirectory);
             }
 
-            MainTabs.Items.Add(tab);
+            tab.Header = CreateDocumentTabHeader(state);
             MainTabs.SelectedItem = tab;
             view.FocusEditor();
         }
@@ -266,6 +327,8 @@ namespace Typify
             {
                 File.WriteAllText(filePath, state.View.DocumentText);
                 state.FilePath = Path.GetFullPath(filePath);
+                state.InitialText = state.View.DocumentText ?? string.Empty;
+                state.IsPlaceholderTab = false;
                 string sourceDirectory = Path.GetDirectoryName(state.FilePath) ?? string.Empty;
                 _workingDirectory = sourceDirectory;
                 ExplorerOverlay.SetWorkingDirectory(_workingDirectory);
