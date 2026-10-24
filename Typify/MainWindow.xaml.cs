@@ -314,6 +314,11 @@ namespace Typify
             var tab = button != null ? button.Tag as TabItem : null;
             if (tab == null) return;
 
+            CloseDocumentTab(tab);
+        }
+
+        private void CloseDocumentTab(TabItem tab)
+        {
             var state = tab.Tag as DocumentTabState;
             if (state != null) state.View.Shutdown();
             MainTabs.Items.Remove(tab);
@@ -544,13 +549,87 @@ namespace Typify
 
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control &&
-                (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift &&
-                e.Key == Key.C)
+            ModifierKeys modifiers = Keyboard.Modifiers;
+            bool ctrl = (modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            bool shift = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            if (ctrl && shift && e.Key == Key.C)
             {
                 e.Handled = true;
                 ActivateCommitOverlay();
                 UpdateLeftTabState();
+                return;
+            }
+
+            if (ctrl && shift && e.Key == Key.S)
+            {
+                e.Handled = true;
+                SaveActiveDocumentAs();
+                return;
+            }
+
+            if (ctrl && shift && e.Key == Key.Tab)
+            {
+                e.Handled = true;
+                SelectAdjacentTab(-1);
+                return;
+            }
+
+            if (ctrl && e.Key == Key.N)
+            {
+                e.Handled = true;
+                CreateAndSelectDocumentTab(null, string.Empty);
+                StatusText.Text = "New document created.";
+                return;
+            }
+
+            if (ctrl && e.Key == Key.O)
+            {
+                e.Handled = true;
+                OpenTypstFileWithDialog();
+                return;
+            }
+
+            if (ctrl && e.Key == Key.S)
+            {
+                e.Handled = true;
+                SaveActiveDocument();
+                return;
+            }
+
+            if (ctrl && e.Key == Key.P)
+            {
+                e.Handled = true;
+                _ = PrintDocumentAsync();
+                return;
+            }
+
+            if (ctrl && (e.Key == Key.W || e.Key == Key.F4))
+            {
+                e.Handled = true;
+                CloseActiveDocumentTab();
+                return;
+            }
+
+            if (ctrl && e.Key == Key.Tab)
+            {
+                e.Handled = true;
+                SelectAdjacentTab(1);
+                return;
+            }
+
+            if (ctrl && e.Key == Key.Oem3)
+            {
+                e.Handled = true;
+                ActivateExplorerOverlay();
+                UpdateLeftTabState();
+                return;
+            }
+
+            if (e.Key == Key.F5)
+            {
+                e.Handled = true;
+                ToggleLivePreview();
             }
         }
 
@@ -562,13 +641,7 @@ namespace Typify
 
         private void LivePreviewButton_Click(object sender, RoutedEventArgs e)
         {
-            _isLivePreviewEnabled = !_isLivePreviewEnabled;
-            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
-            {
-                var state = tab.Tag as DocumentTabState;
-                if (state != null)
-                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
-            }
+            ToggleLivePreview();
         }
 
         private void GitChangesMenuItem_Click(object sender, RoutedEventArgs e)
@@ -847,6 +920,95 @@ namespace Typify
             return result.ToString();
         }
 
+        private OpenFileDialog CreateOpenFileDialog()
+        {
+            return new OpenFileDialog
+            {
+                Title = "Open Typst file",
+                Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
+                DefaultExt = ".typ",
+                Multiselect = false,
+                InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
+            };
+        }
+
+        private SaveFileDialog CreateSaveFileDialog()
+        {
+            return new SaveFileDialog
+            {
+                Title = "Save Typst file",
+                Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
+                DefaultExt = ".typ",
+                AddExtension = true,
+                OverwritePrompt = true,
+                InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
+            };
+        }
+
+        private void OpenTypstFileWithDialog()
+        {
+            var openDialog = CreateOpenFileDialog();
+            if (openDialog.ShowDialog(this) == true)
+                OpenTypstFile(openDialog.FileName);
+        }
+
+        private void SaveActiveDocument()
+        {
+            DocumentTabState activeDocument = GetActiveDocumentState();
+            if (activeDocument == null) return;
+
+            if (!string.IsNullOrWhiteSpace(activeDocument.FilePath))
+            {
+                SaveDocumentToPath(activeDocument, activeDocument.FilePath);
+                return;
+            }
+
+            var saveDialog = CreateSaveFileDialog();
+            if (saveDialog.ShowDialog(this) == true)
+                SaveDocumentToPath(activeDocument, saveDialog.FileName);
+        }
+
+        private void SaveActiveDocumentAs()
+        {
+            DocumentTabState activeDocument = GetActiveDocumentState();
+            if (activeDocument == null) return;
+
+            var saveDialog = CreateSaveFileDialog();
+            if (saveDialog.ShowDialog(this) == true)
+                SaveDocumentToPath(activeDocument, saveDialog.FileName);
+        }
+
+        private void CloseActiveDocumentTab()
+        {
+            var tab = MainTabs.SelectedItem as TabItem;
+            if (tab == null) return;
+            if (string.Equals(tab.Tag as string, GitTabMarker, StringComparison.Ordinal)) return;
+            CloseDocumentTab(tab);
+        }
+
+        private void SelectAdjacentTab(int offset)
+        {
+            int count = MainTabs.Items.Count;
+            if (count == 0 || offset == 0) return;
+
+            int currentIndex = MainTabs.SelectedIndex;
+            if (currentIndex < 0) currentIndex = 0;
+
+            int targetIndex = (currentIndex + offset + count) % count;
+            MainTabs.SelectedIndex = targetIndex;
+        }
+
+        private void ToggleLivePreview()
+        {
+            _isLivePreviewEnabled = !_isLivePreviewEnabled;
+            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
+            {
+                var state = tab.Tag as DocumentTabState;
+                if (state != null)
+                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
+            }
+        }
+
         private async void FileMenuItem_Click(object sender, RoutedEventArgs e)
         {
             switch (((MenuItem)sender).Tag as string)
@@ -856,59 +1018,14 @@ namespace Typify
                     StatusText.Text = "New document created.";
                     break;
                 case "Open":
-                    var openDialog = new OpenFileDialog
-                    {
-                        Title = "Open Typst file",
-                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
-                        DefaultExt = ".typ",
-                        Multiselect = false,
-                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
-                    };
-                    if (openDialog.ShowDialog(this) == true)
-                        OpenTypstFile(openDialog.FileName);
+                    OpenTypstFileWithDialog();
                     break;
                 case "Save":
-                {
-                    DocumentTabState activeDocument = GetActiveDocumentState();
-                    if (activeDocument == null) break;
-
-                    if (!string.IsNullOrWhiteSpace(activeDocument.FilePath))
-                    {
-                        SaveDocumentToPath(activeDocument, activeDocument.FilePath);
-                        break;
-                    }
-
-                    var saveDialog = new SaveFileDialog
-                    {
-                        Title = "Save Typst file",
-                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
-                        DefaultExt = ".typ",
-                        AddExtension = true,
-                        OverwritePrompt = true,
-                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
-                    };
-                    if (saveDialog.ShowDialog(this) == true)
-                        SaveDocumentToPath(activeDocument, saveDialog.FileName);
+                    SaveActiveDocument();
                     break;
-                }
                 case "SaveAs":
-                {
-                    DocumentTabState activeDocument = GetActiveDocumentState();
-                    if (activeDocument == null) break;
-
-                    var saveDialog = new SaveFileDialog
-                    {
-                        Title = "Save Typst file",
-                        Filter = "Typst files (*.typ)|*.typ|All files (*.*)|*.*",
-                        DefaultExt = ".typ",
-                        AddExtension = true,
-                        OverwritePrompt = true,
-                        InitialDirectory = _workingDirectory == "" ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _workingDirectory
-                    };
-                    if (saveDialog.ShowDialog(this) == true)
-                        SaveDocumentToPath(activeDocument, saveDialog.FileName);
+                    SaveActiveDocumentAs();
                     break;
-                }
                 case "Print":
                     await PrintDocumentAsync();
                     break;
