@@ -38,7 +38,7 @@
         <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#E5E5E5" />
         <SolidColorBrush x:Key="WindowCaptionButtonHoverBrush" Color="#E0E0E0" />
         <SolidColorBrush x:Key="WindowCloseButtonHoverBrush" Color="#C42B1C" />
- 
+
         <Style x:Key="TopMenuItemStyle" TargetType="Border">
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Margin" Value="2,0" />
@@ -295,7 +295,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
+                            <Border Grid.Row="0" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,1,1,0">
                                 <TabPanel IsItemsHost="True" Margin="6,0,0,0" Background="Transparent" />
                             </Border>
                             <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBackgroundBrush}">
@@ -607,11 +607,11 @@
                 <StackPanel VerticalAlignment="Top" Margin="0,10,0,0">
                     <!-- Explorer Tab Button -->
                     <Border x:Name="LeftExplorerTab" CornerRadius="3" Margin="2,0,2,0" Padding="3,10"
-        Cursor="Hand" ToolTip="Explorer"
-        MouseEnter="LeftGitChangesTab_MouseEnter"
+                            Cursor="Hand" ToolTip="Explorer"
+                            MouseEnter="LeftGitChangesTab_MouseEnter"
                             MouseLeave="LeftGitChangesTab_MouseLeave"
                             MouseLeftButtonDown="LeftGitChangesTab_MouseLeftButtonDown"
-        Background="Transparent">
+                            Background="Transparent">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="Explorer" FontSize="11" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextBrush}">
@@ -678,7 +678,7 @@
                               Background="Transparent" Cursor="SizeWE"
                               ResizeBehavior="PreviousAndNext" Visibility="Collapsed" />
 
-                <TabControl x:Name="MainTabs" Grid.Column="2" Margin="10,6,10,6"
+                <TabControl x:Name="MainTabs" Grid.Column="2"
                             Style="{StaticResource MainTabsStyle}"
                             ItemContainerStyle="{StaticResource MainTabItemStyle}"
                             HorizontalContentAlignment="Stretch"
