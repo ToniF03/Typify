@@ -61,6 +61,14 @@ namespace Typify
             }
         }
         private bool _isLivePreviewEnabled;
+        private bool _enableWordWrap;
+        private bool _enableAutoSave;
+        private bool _showStatusBar;
+        private bool _confirmBeforeClosing;
+        private int _autoSaveIntervalMinutes;
+        private double _uiScale;
+        private int _editorTabSize;
+        private string _editorFontFamily;
 
         public static Geometry DarkModeGeometry { get; } = Geometry.Parse("F1 M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,20.5 L12,3.5 C16.6944204,3.5 20.5,7.30557963 20.5,12 C20.5,16.6944204 16.6944204,20.5 12,20.5 Z");
         public static Geometry GitGeometry { get; } = Geometry.Parse("F1 M5,58c-2.76142,0 -5,-2.23858 -5,-5v-48c0,-2.76142 2.23858,-5 5,-5h33v12.54404c-2.06553,0.94801 -3.5,3.03446 -3.5,5.45596c0,0.73514 0.13221,1.43941 0.37415,2.09031l-15.28384,15.28384c-0.6509,-0.24194 -1.35517,-0.37415 -2.09031,-0.37415c-3.31371,0 -6,2.68629 -6,6c0,3.31371 2.68629,6 6,6c3.31371,0 6,-2.68629 6,-6c0,-0.73514 -0.13221,-1.43941 -0.37415,-2.09031l14.87415,-14.87415l0,11.50851c-2.06553,0.94801 -3.5,3.03446 -3.5,5.45596c0,3.31371 2.68629,6 6,6c3.31371,0 6,-2.68629 6,-6c0,-2.42149 -1.43447,-4.50795 -3.5,-5.45596l0,-12.08808c2.06553,-0.94801 3.5,-3.03446 3.5,-5.45596c0,-2.42149 -1.43447,-4.50795 -3.5,-5.45596l0,-12.54404h10c2.76142,0 5,2.23858 5,5v48c0,2.76142 -2.23858,5 -5,5z");
@@ -82,6 +90,20 @@ namespace Typify
             ExplorerOverlay.CloseDockedRequested += ExplorerOverlay_CloseDockedRequested;
             CommitOverlay.DockToggleRequested += CommitOverlay_DockToggleRequested;
             CommitOverlay.CloseDockedRequested += CommitOverlay_CloseDockedRequested;
+
+            _isLivePreviewEnabled = Properties.Settings.Default.IsLivePreviewEnabled;
+            _enableWordWrap = Properties.Settings.Default.EnableWordWrap;
+            _enableAutoSave = Properties.Settings.Default.EnableAutoSave;
+            _showStatusBar = Properties.Settings.Default.ShowStatusBar;
+            _confirmBeforeClosing = Properties.Settings.Default.ConfirmBeforeClosing;
+            _autoSaveIntervalMinutes = Properties.Settings.Default.AutoSaveIntervalMinutes;
+            _uiScale = Properties.Settings.Default.UiScale <= 0 ? 1.0 : Properties.Settings.Default.UiScale;
+            _editorTabSize = Properties.Settings.Default.EditorTabSize <= 0 ? 2 : Properties.Settings.Default.EditorTabSize;
+            _editorFontFamily = string.IsNullOrWhiteSpace(Properties.Settings.Default.EditorFontFamily)
+                ? "Consolas"
+                : Properties.Settings.Default.EditorFontFamily;
+
+            StatusText.Visibility = _showStatusBar ? Visibility.Visible : Visibility.Collapsed;
             CreateAndSelectDocumentTab(null, "= Hello, Typst\n\nWrite Typst source here.\n\n#let answer = 42\nThe answer is *#answer*.");
         }
 
@@ -644,6 +666,76 @@ namespace Typify
             ToggleLivePreview();
         }
 
+        private void ApplyLivePreviewToAllDocuments()
+        {
+            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
+            {
+                var state = tab.Tag as DocumentTabState;
+                if (state != null)
+                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
+            }
+        }
+
+        private void ShowPreferencesWindow()
+        {
+            var dialog = new PreferencesWindow(
+                _isDarkTheme,
+                _isLivePreviewEnabled,
+                _enableWordWrap,
+                _enableAutoSave,
+                _showStatusBar,
+                _confirmBeforeClosing,
+                _autoSaveIntervalMinutes,
+                _uiScale,
+                _editorTabSize,
+                _editorFontFamily)
+            {
+                Owner = this
+            };
+
+            void ApplyPreferences(object sender, EventArgs args)
+            {
+                if (_isDarkTheme != dialog.IsDarkThemeSelected)
+                {
+                    _isDarkTheme = dialog.IsDarkThemeSelected;
+                    ApplyTheme(_isDarkTheme);
+                }
+
+                if (_isLivePreviewEnabled != dialog.IsLivePreviewSelected)
+                {
+                    _isLivePreviewEnabled = dialog.IsLivePreviewSelected;
+                    ApplyLivePreviewToAllDocuments();
+                    Properties.Settings.Default.IsLivePreviewEnabled = _isLivePreviewEnabled;
+                }
+
+                _enableWordWrap = dialog.EnableWordWrapSelected;
+                _enableAutoSave = dialog.AutoSaveSelected;
+                _showStatusBar = dialog.ShowStatusBarSelected;
+                _confirmBeforeClosing = dialog.ConfirmBeforeClosingSelected;
+                _autoSaveIntervalMinutes = dialog.AutoSaveIntervalMinutesSelected;
+                _uiScale = dialog.UiScaleSelected;
+                _editorTabSize = dialog.TabSizeSelected;
+                _editorFontFamily = dialog.FontFamilySelected;
+
+                StatusText.Visibility = _showStatusBar ? Visibility.Visible : Visibility.Collapsed;
+
+                Properties.Settings.Default.EnableWordWrap = _enableWordWrap;
+                Properties.Settings.Default.EnableAutoSave = _enableAutoSave;
+                Properties.Settings.Default.ShowStatusBar = _showStatusBar;
+                Properties.Settings.Default.ConfirmBeforeClosing = _confirmBeforeClosing;
+                Properties.Settings.Default.AutoSaveIntervalMinutes = _autoSaveIntervalMinutes;
+                Properties.Settings.Default.UiScale = _uiScale;
+                Properties.Settings.Default.EditorTabSize = _editorTabSize;
+                Properties.Settings.Default.EditorFontFamily = _editorFontFamily;
+                Properties.Settings.Default.Save();
+            }
+
+            dialog.Resources = Resources;
+            dialog.PreferencesChanged += ApplyPreferences;
+            dialog.Closed += (_, __) => dialog.PreferencesChanged -= ApplyPreferences;
+            dialog.ShowDialog();
+        }
+
         private void GitChangesMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ActivateCommitOverlay();
@@ -1001,12 +1093,7 @@ namespace Typify
         private void ToggleLivePreview()
         {
             _isLivePreviewEnabled = !_isLivePreviewEnabled;
-            foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
-            {
-                var state = tab.Tag as DocumentTabState;
-                if (state != null)
-                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
-            }
+            ApplyLivePreviewToAllDocuments();
         }
 
         private async void FileMenuItem_Click(object sender, RoutedEventArgs e)
@@ -1030,6 +1117,7 @@ namespace Typify
                     await PrintDocumentAsync();
                     break;
                 case "Preferences":
+                    ShowPreferencesWindow();
                     break;
             }
         }

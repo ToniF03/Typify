@@ -4,68 +4,6 @@
         FontFamily="Segoe UI" FontSize="12.5"
         Background="{DynamicResource VsBackgroundBrush}" Foreground="{DynamicResource VsTextBrush}">
     <UserControl.Resources>
-        <!-- VS Code Theme Palettes (Default Dark+, updated dynamically via ApplyTheme) -->
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#252526" />
-        <SolidColorBrush x:Key="SidebarBrush" Color="#252526" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#2B2B2B" />
-        <SolidColorBrush x:Key="TextBrush" Color="#CCCCCC" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#858585" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#0E639C" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#1177BB" />
-        <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="HoverBrush" Color="#2A2D2E" />
-        <SolidColorBrush x:Key="SelectedBrush" Color="#094771" />
-
-        <SolidColorBrush x:Key="VsBackgroundBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="VsSidebarBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsHeaderBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsBorderBrush" Color="#2B2B2B" />
-        <SolidColorBrush x:Key="VsTextBrush" Color="#CCCCCC" />
-        <SolidColorBrush x:Key="VsMutedTextBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsPrimaryButtonBrush" Color="#0E639C" />
-        <SolidColorBrush x:Key="VsPrimaryButtonHoverBrush" Color="#1177BB" />
-        <SolidColorBrush x:Key="VsPrimaryButtonTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="VsSecondaryButtonBrush" Color="#3A3D41" />
-        <SolidColorBrush x:Key="VsSecondaryButtonHoverBrush" Color="#45494E" />
-        <SolidColorBrush x:Key="VsIconButtonHoverBrush" Color="#333333" />
-        <SolidColorBrush x:Key="VsInputBackgroundBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputBorderBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputFocusBorderBrush" Color="#007FD4" />
-        <SolidColorBrush x:Key="VsPlaceholderBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsListHoverBrush" Color="#2A2D2E" />
-        <SolidColorBrush x:Key="VsListSelectedBrush" Color="#094771" />
-        <SolidColorBrush x:Key="VsStatusBarBrush" Color="#0E639C" />
-        <SolidColorBrush x:Key="VsStatusBarTextBrush" Color="#FFFFFF" />
-
-        <!-- Status letter badges -->
-        <SolidColorBrush x:Key="VsStatusModifiedBrush" Color="#E2C08D" />
-        <SolidColorBrush x:Key="VsStatusUntrackedBrush" Color="#73C991" />
-        <SolidColorBrush x:Key="VsStatusAddedBrush" Color="#73C991" />
-        <SolidColorBrush x:Key="VsStatusDeletedBrush" Color="#C74E39" />
-        <SolidColorBrush x:Key="VsStatusRenamedBrush" Color="#4EC9B0" />
-
-        <!-- Diff colors -->
-        <SolidColorBrush x:Key="DiffBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="VsDiffBackgroundBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="VsDiffHeaderBarBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsDiffAddedBg" Color="#1B3B24" />
-        <SolidColorBrush x:Key="VsDiffAddedFg" Color="#89D185" />
-        <SolidColorBrush x:Key="VsDiffDeletedBg" Color="#471C1E" />
-        <SolidColorBrush x:Key="VsDiffDeletedFg" Color="#F85149" />
-        <SolidColorBrush x:Key="VsDiffHunkBg" Color="#1C2A3A" />
-        <SolidColorBrush x:Key="VsDiffHunkFg" Color="#79C0FF" />
-        <SolidColorBrush x:Key="VsDiffMetaBg" Color="#252526" />
-        <SolidColorBrush x:Key="VsDiffMetaFg" Color="#8B949E" />
-        <SolidColorBrush x:Key="DiffAddedForeground" Color="#89D185" />
-        <SolidColorBrush x:Key="DiffAddedBackground" Color="#1B3B24" />
-        <SolidColorBrush x:Key="DiffDeletedForeground" Color="#F85149" />
-        <SolidColorBrush x:Key="DiffDeletedBackground" Color="#471C1E" />
-        <SolidColorBrush x:Key="DiffHunkForeground" Color="#79C0FF" />
-        <SolidColorBrush x:Key="DiffHunkBackground" Color="#1C2A3A" />
-        <SolidColorBrush x:Key="DiffHeaderForeground" Color="#8B949E" />
-        <SolidColorBrush x:Key="DiffHeaderBackground" Color="#252526" />
-
         <!-- VS Code Primary Button Style -->
         <Style x:Key="VsPrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource VsPrimaryButtonBrush}" />

@@ -19,26 +19,6 @@
                             GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#F3F3F3" />
-        <SolidColorBrush x:Key="SidebarBrush" Color="#F3F3F3" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#E5E5E5" />
-        <SolidColorBrush x:Key="TextBrush" Color="#333333" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#616161" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#007ACC" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0062A3" />
-        <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="GitBrush" Color="#F03C2E" />
-        <SolidColorBrush x:Key="HoverBrush" Color="#E8E8E8" />
-        <SolidColorBrush x:Key="SelectedBrush" Color="#E4E6F1" />
-        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="EditorTextBrush" Color="#333333" />
-        <SolidColorBrush x:Key="DiagnosticBackgroundBrush" Color="#FFF2F1" />
-        <SolidColorBrush x:Key="DiagnosticTextBrush" Color="#CF222E" />
-        <SolidColorBrush x:Key="PreviewPageBorderBrush" Color="#E5E5E5" />
-        <SolidColorBrush x:Key="WindowCaptionButtonHoverBrush" Color="#E0E0E0" />
-        <SolidColorBrush x:Key="WindowCloseButtonHoverBrush" Color="#C42B1C" />
-
         <Style x:Key="TopMenuItemStyle" TargetType="Border">
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Margin" Value="2,0" />
@@ -150,37 +130,6 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.5" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="PrimaryChrome" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              RecognizesAccessKey="True" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PrimaryChrome" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
-                                <Setter TargetName="PrimaryChrome" Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="PrimaryChrome" Property="Opacity" Value="0.82" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="PrimaryChrome" Property="Opacity" Value="0.5" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

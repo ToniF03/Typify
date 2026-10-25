@@ -8,38 +8,6 @@
              IsHitTestVisible="True"
              HorizontalAlignment="Left" VerticalAlignment="Stretch">
     <UserControl.Resources>
-        <!-- VS Code / Visual Studio Theme Palettes (dynamically updated in code-behind via ApplyTheme) -->
-        <SolidColorBrush x:Key="VsBackgroundBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="VsSidebarBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsHeaderBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsBorderBrush" Color="#2B2B2B" />
-        <SolidColorBrush x:Key="VsTextBrush" Color="#CCCCCC" />
-        <SolidColorBrush x:Key="VsMutedTextBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsPrimaryButtonBrush" Color="#0E639C" />
-        <SolidColorBrush x:Key="VsPrimaryButtonHoverBrush" Color="#1177BB" />
-        <SolidColorBrush x:Key="VsPrimaryButtonTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="VsSecondaryButtonBrush" Color="#3A3D41" />
-        <SolidColorBrush x:Key="VsSecondaryButtonHoverBrush" Color="#45494E" />
-        <SolidColorBrush x:Key="VsIconButtonHoverBrush" Color="#333333" />
-        <SolidColorBrush x:Key="VsInputBackgroundBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputBorderBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputFocusBorderBrush" Color="#007FD4" />
-        <SolidColorBrush x:Key="VsPlaceholderBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsListHoverBrush" Color="#2A2D2E" />
-        <SolidColorBrush x:Key="VsListSelectedBrush" Color="#094771" />
-        <SolidColorBrush x:Key="VsTabActiveBorderBrush" Color="#007FD4" />
-        <SolidColorBrush x:Key="VsWarningBrush" Color="#CCA700" />
-        <SolidColorBrush x:Key="VsErrorBrush" Color="#F14C4C" />
-        <SolidColorBrush x:Key="VsSuccessBrush" Color="#89D185" />
-        <SolidColorBrush x:Key="VsBannerBackgroundBrush" Color="#1C2D42" />
-        <SolidColorBrush x:Key="VsBannerTextBrush" Color="#9CDCFE" />
-
-        <SolidColorBrush x:Key="VsStatusModifiedBrush" Color="#E2C08D" />
-        <SolidColorBrush x:Key="VsStatusUntrackedBrush" Color="#73C991" />
-        <SolidColorBrush x:Key="VsStatusAddedBrush" Color="#73C991" />
-        <SolidColorBrush x:Key="VsStatusDeletedBrush" Color="#C74E39" />
-        <SolidColorBrush x:Key="VsStatusRenamedBrush" Color="#4EC9B0" />
-
         <!-- Primary Button Style -->
         <Style x:Key="VsPrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource VsPrimaryButtonBrush}" />

@@ -9,31 +9,6 @@
              IsHitTestVisible="True"
              HorizontalAlignment="Left" VerticalAlignment="Stretch">
     <UserControl.Resources>
-        <!-- Shared color resources; ApplyTheme replaces these brushes when the application theme changes. -->
-        <SolidColorBrush x:Key="VsBackgroundBrush" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="VsSidebarBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsHeaderBrush" Color="#252526" />
-        <SolidColorBrush x:Key="VsBorderBrush" Color="#2B2B2B" />
-        <SolidColorBrush x:Key="VsTextBrush" Color="#CCCCCC" />
-        <SolidColorBrush x:Key="VsMutedTextBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsPrimaryButtonBrush" Color="#0E639C" />
-        <SolidColorBrush x:Key="VsPrimaryButtonHoverBrush" Color="#1177BB" />
-        <SolidColorBrush x:Key="VsPrimaryButtonTextBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="VsSecondaryButtonBrush" Color="#3A3D41" />
-        <SolidColorBrush x:Key="VsSecondaryButtonHoverBrush" Color="#45494E" />
-        <SolidColorBrush x:Key="VsIconButtonHoverBrush" Color="#333333" />
-        <SolidColorBrush x:Key="VsInputBackgroundBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputBorderBrush" Color="#3C3C3C" />
-        <SolidColorBrush x:Key="VsInputFocusBorderBrush" Color="#007FD4" />
-        <SolidColorBrush x:Key="VsPlaceholderBrush" Color="#858585" />
-        <SolidColorBrush x:Key="VsListHoverBrush" Color="#2A2D2E" />
-        <SolidColorBrush x:Key="VsListSelectedBrush" Color="#094771" />
-        <SolidColorBrush x:Key="VsTabActiveBorderBrush" Color="#007FD4" />
-        <SolidColorBrush x:Key="VsWarningBrush" Color="#CCA700" />
-        <SolidColorBrush x:Key="VsErrorBrush" Color="#F14C4C" />
-        <SolidColorBrush x:Key="VsSuccessBrush" Color="#89D185" />
-        <SolidColorBrush x:Key="VsBannerBackgroundBrush" Color="#1C2D42" />
-        <SolidColorBrush x:Key="VsBannerTextBrush" Color="#9CDCFE" />
         <Geometry x:Key="TreeChevronRightGeometry">M4,2 L8,6 L4,10</Geometry>
         <Geometry x:Key="TreeChevronDownGeometry">M2,4 L6,8 L10,4</Geometry>
 

@@ -56,6 +56,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="PreferencesWindow.xaml.cs" >
+      <DependentUpon>PreferencesWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="TypifyDocumentView.xaml.cs">
       <DependentUpon>TypifyDocumentView.xaml</DependentUpon>
     </Compile>
@@ -124,6 +127,10 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="App.config" />
+    <Page Include="PreferencesWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="TypifyDocumentView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
