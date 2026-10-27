@@ -70,7 +70,7 @@ namespace Typify
 
             this.SourceInitialized += (s, e) =>
             {
-                NativeWindowStyle.ApplyWindowFrame(this);
+                NativeWindowStyle.ApplyWindowFrame(this, canMaximize: false, canMinimize: false);
             };
         }
 

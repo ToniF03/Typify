@@ -8,6 +8,8 @@ public static class NativeWindowStyle
     private const int GwlStyle = -16;
     private const uint WsPopup = 0x80000000u;
     private const uint WsOverlappedWindow = 0x00CF0000u;
+    private const uint WsMaximizeBox = 0x00010000u;
+    private const uint WsMinimizeBox = 0x00020000u;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoZOrder = 0x0004;
@@ -45,9 +47,9 @@ public static class NativeWindowStyle
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr windowHandle, int attribute, ref int value, int valueSize);
 
-    public static void ApplyWindowFrame(Window window)
+    public static void ApplyWindowFrame(Window window, bool canMaximize = true, bool canMinimize = true)
     {
-        ApplyOverlappedWindowStyle(window);
+        ApplyOverlappedWindowStyle(window, canMaximize, canMinimize);
         UpdateWindowCornerPreference(window);
     }
 
@@ -105,7 +107,7 @@ public static class NativeWindowStyle
         }
     }
 
-    public static void ApplyOverlappedWindowStyle(Window window)
+    public static void ApplyOverlappedWindowStyle(Window window, bool canMaximize = true, bool canMinimize = true)
     {
         if (window == null) throw new ArgumentNullException(nameof(window));
 
@@ -117,6 +119,10 @@ public static class NativeWindowStyle
             : unchecked((uint)GetWindowLong32(windowHandle, GwlStyle));
 
         uint updatedStyle = (currentStyle & ~WsPopup) | WsOverlappedWindow;
+        if (!canMaximize)
+            updatedStyle &= ~WsMaximizeBox;
+        if (!canMinimize)
+            updatedStyle &= ~WsMinimizeBox;
 
         if (IntPtr.Size == 8)
             SetWindowLongPtr64(windowHandle, GwlStyle, new IntPtr(updatedStyle));
