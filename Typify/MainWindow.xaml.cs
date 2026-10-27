@@ -23,19 +23,6 @@ namespace Typify
 {
     public partial class MainWindow : Window
     {
-        private const int DwmWindowCornerPreferenceAttribute = 33;
-        private const int DwmTransitionsForcedDisabledAttribute = 3;
-        private const int DwmWindowCornerDoNotRound = 1;
-        private const int DwmWindowCornerRound = 2;
-        private const int ShowWindowMinimize = 6;
-        private const int ShowWindowMaximize = 3;
-        private const int ShowWindowRestore = 9;
-
-        [DllImport("dwmapi.dll", PreserveSig = true)]
-        private static extern int DwmSetWindowAttribute(IntPtr windowHandle, int attribute, ref int value, int valueSize);
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr windowHandle, int command);
 
         private string _workingDirectory = string.Empty;
         private const string GitTabMarker = "GitTab";
@@ -786,13 +773,12 @@ namespace Typify
 
         private void MinimizeWindowButton_Click(object sender, RoutedEventArgs e)
         {
-            ShowWindow(new WindowInteropHelper(this).Handle, ShowWindowMinimize);
+            NativeWindowStyle.Minimize(this);
         }
 
         private void MaximizeWindowButton_Click(object sender, RoutedEventArgs e)
         {
-            int command = WindowState == WindowState.Maximized ? ShowWindowRestore : ShowWindowMaximize;
-            ShowWindow(new WindowInteropHelper(this).Handle, command);
+            NativeWindowStyle.MaximizeOrRestore(this);
         }
 
         private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
@@ -803,13 +789,12 @@ namespace Typify
         private void MainWindow_StateChanged(object sender, EventArgs e)
         {
             UpdateWindowStateControls();
-            UpdateWindowCornerPreference();
+            NativeWindowStyle.UpdateWindowCornerPreference(this);
         }
 
         private void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
-            ApplyOverlappedWindowStyle();
-            UpdateWindowCornerPreference();
+            NativeWindowStyle.ApplyWindowFrame(this);
         }
 
         private void UpdateWindowStateControls()
@@ -818,38 +803,6 @@ namespace Typify
             mainGrid.Margin = isMaximized ? new Thickness(5) : new Thickness(0);
             MaximizeWindowGlyph.Text = isMaximized ? "\uE923" : "\uE922";
             MaximizeWindowButton.ToolTip = isMaximized ? "Restore" : "Maximize";
-        }
-
-        private void UpdateWindowCornerPreference()
-        {
-            IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-            if (windowHandle == IntPtr.Zero) return;
-
-            int preference = WindowState == WindowState.Maximized
-                ? DwmWindowCornerDoNotRound
-                : DwmWindowCornerRound;
-
-            try
-            {
-                int transitionsForcedDisabled = 0;
-                DwmSetWindowAttribute(
-                    windowHandle,
-                    DwmTransitionsForcedDisabledAttribute,
-                    ref transitionsForcedDisabled,
-                    Marshal.SizeOf(typeof(int)));
-
-                DwmSetWindowAttribute(
-                    windowHandle,
-                    DwmWindowCornerPreferenceAttribute,
-                    ref preference,
-                    Marshal.SizeOf(typeof(int)));
-            }
-            catch (DllNotFoundException)
-            {
-            }
-            catch (EntryPointNotFoundException)
-            {
-            }
         }
 
         private void ApplyTheme(bool isDark)

@@ -67,6 +67,16 @@ namespace Typify
             SearchTextBox.Text = string.Empty;
             HookEvents();
             _isInitializing = false;
+
+            this.SourceInitialized += (s, e) =>
+            {
+                NativeWindowStyle.ApplyWindowFrame(this);
+            };
+        }
+
+        private void CloseWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
         }
 
         private void SelectComboByValue(System.Windows.Controls.ComboBox comboBox, string value)
