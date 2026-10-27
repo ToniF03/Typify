@@ -91,7 +91,7 @@ namespace Typify
                 : Properties.Settings.Default.EditorFontFamily;
 
             StatusText.Visibility = _showStatusBar ? Visibility.Visible : Visibility.Collapsed;
-            CreateAndSelectDocumentTab(null, "= Hello, Typst\n\nWrite Typst source here.\n\n#let answer = 42\nThe answer is *#answer*.");
+            CreateAndSelectDocumentTab(null, "= Hello, Typst\n\nWrite Typst source here.\n\n#let answer = 42\nThe answer is *#answer*." + new string('\n', 60));
         }
 
         private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
