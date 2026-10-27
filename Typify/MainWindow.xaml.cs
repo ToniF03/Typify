@@ -38,7 +38,7 @@ namespace Typify
             public string InitialText;
             public bool IsPlaceholderTab;
         }
-        private bool _isDarkTheme
+        private bool IsDarkTheme
         {
             get => Properties.Settings.Default.IsDarkTheme;
             set
@@ -108,14 +108,13 @@ namespace Typify
 
         private DocumentTabState GetActiveDocumentState()
         {
-            var tab = MainTabs.SelectedItem as TabItem;
-            return tab != null ? tab.Tag as DocumentTabState : null;
+            return MainTabs.SelectedItem is TabItem tab ? tab.Tag as DocumentTabState : null;
         }
 
         private TypifyDocumentView GetActiveDocumentView()
         {
             DocumentTabState state = GetActiveDocumentState();
-            return state != null ? state.View : null;
+            return state?.View;
         }
 
         private GitTabView GetOpenGitTabView()
@@ -137,7 +136,7 @@ namespace Typify
 
             var gitView = new GitTabView();
             gitView.RepositoryRefreshed += GitTabView_RepositoryRefreshed;
-            gitView.UpdateTheme(_isDarkTheme);
+            gitView.UpdateTheme(IsDarkTheme);
 
             gitTab = new TabItem
             {
@@ -148,7 +147,7 @@ namespace Typify
 
             MainTabs.Items.Add(gitTab);
             MainTabs.SelectedItem = gitTab;
-            await gitView.InitializeAsync(_workingDirectory, _isDarkTheme);
+            await gitView.InitializeAsync(_workingDirectory, IsDarkTheme);
         }
 
         private async void OpenGitTabMenuItem_Click(object sender, RoutedEventArgs e)
@@ -161,8 +160,7 @@ namespace Typify
             return MainTabs.Items.OfType<TabItem>()
                 .FirstOrDefault(item =>
                 {
-                    var state = item.Tag as DocumentTabState;
-                    return state != null && state.FilePath != null &&
+                    return item.Tag is DocumentTabState state && state.FilePath != null &&
                            string.Equals(state.FilePath, fullPath, StringComparison.OrdinalIgnoreCase);
                 });
         }
@@ -172,8 +170,7 @@ namespace Typify
             return MainTabs.Items.OfType<TabItem>()
                 .FirstOrDefault(item =>
                 {
-                    var state = item.Tag as DocumentTabState;
-                    if (state == null || state.FilePath != null || state.View == null)
+                    if (!(item.Tag is DocumentTabState state) || state.FilePath != null || state.View == null)
                         return false;
 
                     if (state.IsPlaceholderTab)
@@ -214,7 +211,7 @@ namespace Typify
                 else
                 {
                     view = new TypifyDocumentView();
-                    view.SetDarkTheme(_isDarkTheme);
+                    view.SetDarkTheme(IsDarkTheme);
                     view.SetLivePreviewEnabled(_isLivePreviewEnabled);
 
                     tab = new TabItem();
@@ -232,7 +229,7 @@ namespace Typify
             else
             {
                 view = new TypifyDocumentView();
-                view.SetDarkTheme(_isDarkTheme);
+                view.SetDarkTheme(IsDarkTheme);
                 view.SetLivePreviewEnabled(_isLivePreviewEnabled);
 
                 tab = new TabItem();
@@ -319,8 +316,7 @@ namespace Typify
 
         private void DocumentTabCloseButton_Click(object sender, RoutedEventArgs e)
         {
-            var button = sender as Button;
-            var tab = button != null ? button.Tag as TabItem : null;
+            var tab = sender is Button button ? button.Tag as TabItem : null;
             if (tab == null) return;
 
             CloseDocumentTab(tab);
@@ -328,8 +324,8 @@ namespace Typify
 
         private void CloseDocumentTab(TabItem tab)
         {
-            var state = tab.Tag as DocumentTabState;
-            if (state != null) state.View.Shutdown();
+            DocumentTabState state = tab.Tag as DocumentTabState;
+            state?.View.Shutdown();
             MainTabs.Items.Remove(tab);
             if (MainTabs.Items.Count == 0)
                 CreateAndSelectDocumentTab(null, string.Empty);
@@ -424,8 +420,7 @@ namespace Typify
             DockedOverlaySplitter.Visibility = hasDockedOverlays ? Visibility.Visible : Visibility.Collapsed;
 
             dockedOverlayTabs.ApplyTemplate();
-            var headerPanel = dockedOverlayTabs.Template.FindName("HeaderPanel", dockedOverlayTabs) as TabPanel;
-            if (headerPanel != null)
+            if (dockedOverlayTabs.Template.FindName("HeaderPanel", dockedOverlayTabs) is TabPanel headerPanel)
             {
                 headerPanel.Visibility = dockedOverlayTabs.Items.Count > 1
                     ? Visibility.Visible
@@ -481,8 +476,8 @@ namespace Typify
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            ApplyTheme(_isDarkTheme);
-            await CommitOverlay.InitializeAsync(_workingDirectory, _isDarkTheme);
+            ApplyTheme(IsDarkTheme);
+            await CommitOverlay.InitializeAsync(_workingDirectory, IsDarkTheme);
             CommitOverlay.CommitCompleted += CommitOverlay_CommitCompleted;
             CommitOverlay.VisibilityChanged += (s, ev) => UpdateLeftTabState();
             CommitOverlay.StatusUpdated += (s, ev) => UpdateLeftTabState();
@@ -644,8 +639,8 @@ namespace Typify
 
         private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            _isDarkTheme = !_isDarkTheme;
-            ApplyTheme(_isDarkTheme);
+            IsDarkTheme = !IsDarkTheme;
+            ApplyTheme(IsDarkTheme);
         }
 
         private void LivePreviewButton_Click(object sender, RoutedEventArgs e)
@@ -657,16 +652,15 @@ namespace Typify
         {
             foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
             {
-                var state = tab.Tag as DocumentTabState;
-                if (state != null)
-                    state.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
+                DocumentTabState state = tab.Tag as DocumentTabState;
+                state?.View.SetLivePreviewEnabled(_isLivePreviewEnabled);
             }
         }
 
         private void ShowPreferencesWindow()
         {
             var dialog = new PreferencesWindow(
-                _isDarkTheme,
+                IsDarkTheme,
                 _isLivePreviewEnabled,
                 _enableWordWrap,
                 _enableAutoSave,
@@ -682,10 +676,10 @@ namespace Typify
 
             void ApplyPreferences(object sender, EventArgs args)
             {
-                if (_isDarkTheme != dialog.IsDarkThemeSelected)
+                if (IsDarkTheme != dialog.IsDarkThemeSelected)
                 {
-                    _isDarkTheme = dialog.IsDarkThemeSelected;
-                    ApplyTheme(_isDarkTheme);
+                    IsDarkTheme = dialog.IsDarkThemeSelected;
+                    ApplyTheme(IsDarkTheme);
                 }
 
                 if (_isLivePreviewEnabled != dialog.IsLivePreviewSelected)
@@ -827,14 +821,12 @@ namespace Typify
 
             foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
             {
-                var document = tab.Tag as DocumentTabState;
-                if (document != null)
-                    document.View.SetDarkTheme(isDark);
+                DocumentTabState document = tab.Tag as DocumentTabState;
+                document?.View.SetDarkTheme(isDark);
             }
 
             GitTabView gitTabView = GetOpenGitTabView();
-            if (gitTabView != null)
-                gitTabView.UpdateTheme(isDark);
+            gitTabView?.UpdateTheme(isDark);
 
             CommitOverlay.UpdateTheme(isDark);
             ExplorerOverlay.UpdateTheme(isDark);
@@ -853,9 +845,8 @@ namespace Typify
             _isClosing = true;
             foreach (TabItem tab in MainTabs.Items.OfType<TabItem>())
             {
-                var state = tab.Tag as DocumentTabState;
-                if (state != null)
-                    state.View.Shutdown();
+                DocumentTabState state = tab.Tag as DocumentTabState;
+                state?.View.Shutdown();
             }
         }
 
@@ -1025,8 +1016,7 @@ namespace Typify
 
         private void CloseActiveDocumentTab()
         {
-            var tab = MainTabs.SelectedItem as TabItem;
-            if (tab == null) return;
+            if (!(MainTabs.SelectedItem is TabItem tab)) return;
             if (string.Equals(tab.Tag as string, GitTabMarker, StringComparison.Ordinal)) return;
             CloseDocumentTab(tab);
         }

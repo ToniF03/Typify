@@ -18,7 +18,7 @@ namespace Typify
         public int TabSizeSelected { get; private set; }
         public string FontFamilySelected { get; private set; }
 
-        private bool _isInitializing;
+        private readonly bool _isInitializing;
 
         public event EventHandler PreferencesChanged;
 
