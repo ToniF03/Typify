@@ -91,7 +91,7 @@ The current lexer recognizes:
 | Typst code marker `#` and following identifier | Marker color; keywords and function-like names have dedicated colors. |
 | Keyword set (`let`, `set`, `show`, `if`, `for`, `import`, `include`, booleans, and others) | Keyword color. |
 | Identifier after `#` followed by `(` | Function color; this is a syntactic guess, not symbol resolution. |
-| Single- or double-quoted strings | String color. Backslash escapes are considered when locating the end quote. |
+| Double-quoted strings | String color. Backslash escapes are considered when locating the end quote. |
 | Numeric literals and adjacent letters, `%`, or periods | Number color. This is lexical token coloring, not Typst type/unit validation. |
 | `//` and `/* ... */` comments | Comment color. Block comments may span lines. |
 | `$...$` math spans on one line | Math color and italic style. The lexer does not extend a math span across line breaks. |
@@ -99,7 +99,7 @@ The current lexer recognizes:
 | `@label` and `<label>` references | Reference color. |
 | A line beginning with one or more `=` followed by a space | Marker color for the equals signs; heading color and bold style for the rest of the line. |
 | Leading `- `, `+ `, and `/ ` markers | Marker color and bold style. |
-| `**...**` and `*...*` emphasis spans | Heading color/bold for double asterisks; math color/italic for single asterisks. |
+| `**...**`, `*...*`, and `_..._` emphasis spans | Heading color/bold for double and single asterisks; math color/italic for underscores. |
 
 The light and dark palettes are defined in the `LightPalette` and `DarkPalette` fields. The host can use the `Foreground` property for ordinary uncolored text and set a matching `Background`; `IsDarkTheme` only selects syntax colors.
 

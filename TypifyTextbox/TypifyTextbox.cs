@@ -32,6 +32,10 @@ namespace Typify.TextBox
         private bool _synchronizing;
         private bool _updatingTextProperty;
         private bool _applyingHighlight;
+        private string _lastHighlightedText = string.Empty;
+        private bool _lastHighlightedDarkTheme;
+        private int _pendingHighlightStart;
+        private int _pendingHighlightEnd;
 
         public TypifyTextbox()
         {
@@ -43,6 +47,7 @@ namespace Typify.TextBox
             Foreground = Brush("#333333");
             Background = Brush("#FFFFFF");
             BorderBrush = Brush("#E5E5E5");
+            BorderThickness = ShowBorder ? new Thickness(1) : new Thickness(0);
             Padding = new Thickness(10);
             SpellCheck.SetIsEnabled(this, false);
 
@@ -100,7 +105,9 @@ namespace Typify.TextBox
 
         private static void OnThemeChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
         {
-            ((TypifyTextbox)dependencyObject).QueueHighlight();
+            var editor = (TypifyTextbox)dependencyObject;
+            editor._lastHighlightedText = null;
+            editor.QueueHighlight();
         }
 
         private static void OnScrollOptionsChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
@@ -116,9 +123,13 @@ namespace Typify.TextBox
             _synchronizing = true;
             try
             {
-                var range = new TextRange(Document.ContentStart, Document.ContentEnd);
-                if (!string.Equals(ReadEditorText(), value, StringComparison.Ordinal))
+                string current = ReadEditorText();
+                if (!string.Equals(current, value, StringComparison.Ordinal))
+                {
+                    MarkDirtyRange(current, value);
+                    var range = new TextRange(Document.ContentStart, Document.ContentEnd);
                     range.Text = value;
+                }
                 if (!string.Equals(Text, value, StringComparison.Ordinal))
                 {
                     _updatingTextProperty = true;
@@ -134,6 +145,7 @@ namespace Typify.TextBox
         {
             if (_synchronizing || _applyingHighlight) return;
             string value = ReadEditorText();
+            MarkDirtyFromChanges(e.Changes, value.Length);
             if (!string.Equals(Text, value, StringComparison.Ordinal))
             {
                 _updatingTextProperty = true;
@@ -167,26 +179,57 @@ namespace Typify.TextBox
         private void HighlightTimer_Tick(object sender, EventArgs e)
         {
             _highlightTimer.Stop();
-            ApplySyntaxHighlighting(ReadEditorText());
+            string source = ReadEditorText();
+            bool isDarkTheme = IsDarkTheme;
+            if (string.Equals(source, _lastHighlightedText, StringComparison.Ordinal) && isDarkTheme == _lastHighlightedDarkTheme)
+                return;
+
+            bool themeChanged = isDarkTheme != _lastHighlightedDarkTheme;
+            bool fullRehighlight = themeChanged || _lastHighlightedText == null || !string.Equals(source, _lastHighlightedText, StringComparison.Ordinal) && (_pendingHighlightEnd <= _pendingHighlightStart);
+            if (fullRehighlight)
+                ApplySyntaxHighlighting(source);
+            else
+                ApplySyntaxHighlightingRange(source, _pendingHighlightStart, _pendingHighlightEnd);
+
+            _pendingHighlightStart = 0;
+            _pendingHighlightEnd = 0;
+            _lastHighlightedText = source;
+            _lastHighlightedDarkTheme = isDarkTheme;
         }
 
         private void ApplySyntaxHighlighting(string source)
         {
+            ApplySyntaxHighlightingRange(source, 0, source.Length);
+        }
+
+        private void ApplySyntaxHighlightingRange(string source, int dirtyStart, int dirtyEnd)
+        {
             if (source.Length == 0) return;
-            TextPointer[] positions = BuildCharacterMap(source);
-            if (positions == null) return;
+            if (dirtyStart < 0) dirtyStart = 0;
+            if (dirtyEnd > source.Length) dirtyEnd = source.Length;
+            if (dirtyEnd <= dirtyStart) return;
+
+            int rangeStart = ExpandToLineStart(source, dirtyStart);
+            int rangeEnd = ExpandToLineEnd(source, dirtyEnd);
+            TextPointer start = GetTextPointerAtOffset(rangeStart);
+            TextPointer end = GetTextPointerAtOffset(rangeEnd);
+            if (start == null || end == null) return;
+
             _applyingHighlight = true;
             try
             {
-                var allText = new TextRange(positions[0], positions[source.Length]);
-                allText.ApplyPropertyValue(TextElement.ForegroundProperty, Foreground);
-                allText.ApplyPropertyValue(TextElement.FontWeightProperty, FontWeights.Normal);
-                allText.ApplyPropertyValue(TextElement.FontStyleProperty, FontStyles.Normal);
+                var dirtyRange = new TextRange(start, end);
+                dirtyRange.ApplyPropertyValue(TextElement.ForegroundProperty, Foreground);
+                dirtyRange.ApplyPropertyValue(TextElement.FontWeightProperty, FontWeights.Normal);
+                dirtyRange.ApplyPropertyValue(TextElement.FontStyleProperty, FontStyles.Normal);
 
-                foreach (HighlightSpan span in TypstLexer.Tokenize(source, IsDarkTheme))
+                foreach (HighlightSpan span in TypstLexer.TokenizeRange(source, IsDarkTheme, rangeStart, rangeEnd))
                 {
-                    if (span.Start < 0 || span.End > source.Length || span.End <= span.Start) continue;
-                    var token = new TextRange(positions[span.Start], positions[span.End]);
+                    if (span.Start < rangeStart || span.End > rangeEnd || span.End <= span.Start) continue;
+                    TextPointer tokenStart = GetTextPointerAtOffset(span.Start);
+                    TextPointer tokenEnd = GetTextPointerAtOffset(span.End);
+                    if (tokenStart == null || tokenEnd == null) continue;
+                    var token = new TextRange(tokenStart, tokenEnd);
                     token.ApplyPropertyValue(TextElement.ForegroundProperty, span.Color);
                     if (span.IsBold)
                         token.ApplyPropertyValue(TextElement.FontWeightProperty, FontWeights.Bold);
@@ -197,32 +240,120 @@ namespace Typify.TextBox
             finally { _applyingHighlight = false; }
         }
 
-        private TextPointer[] BuildCharacterMap(string source)
+        private void MarkDirtyFromChanges(ICollection<TextChange> changes, int currentLength)
         {
-            var positions = new TextPointer[source.Length + 1];
-            int offset = 0;
+            if (changes == null || changes.Count == 0)
+            {
+                MarkDirtyRange(0, currentLength);
+                return;
+            }
+
+            int start = int.MaxValue;
+            int end = 0;
+            foreach (TextChange change in changes)
+            {
+                if (change.Offset < start) start = change.Offset;
+                int localEnd = change.Offset + Math.Max(change.AddedLength, change.RemovedLength);
+                if (localEnd > end) end = localEnd;
+            }
+
+            MarkDirtyRange(start, Math.Min(end + 1, currentLength));
+        }
+
+        private void MarkDirtyRange(string oldText, string newText)
+        {
+            int oldLength = oldText?.Length ?? 0;
+            int newLength = newText?.Length ?? 0;
+            int prefix = 0;
+            int minLength = Math.Min(oldLength, newLength);
+            while (prefix < minLength && oldText[prefix] == newText[prefix]) prefix++;
+
+            int oldSuffix = oldLength;
+            int newSuffix = newLength;
+            while (oldSuffix > prefix && newSuffix > prefix && oldText[oldSuffix - 1] == newText[newSuffix - 1])
+            {
+                oldSuffix--;
+                newSuffix--;
+            }
+
+            MarkDirtyRange(prefix, Math.Max(prefix, newSuffix));
+        }
+
+        private void MarkDirtyRange(int start, int end)
+        {
+            if (start < 0) start = 0;
+            if (end < start) end = start;
+            if (_pendingHighlightEnd > _pendingHighlightStart)
+            {
+                if (start < _pendingHighlightStart) _pendingHighlightStart = start;
+                if (end > _pendingHighlightEnd) _pendingHighlightEnd = end;
+            }
+            else
+            {
+                _pendingHighlightStart = start;
+                _pendingHighlightEnd = end;
+            }
+        }
+
+        private TextPointer GetTextPointerAtOffset(int offset)
+        {
+            if (offset <= 0) return Document.ContentStart;
+
+            int remaining = offset;
             TextPointer pointer = Document.ContentStart;
-            while (pointer != null && offset < source.Length)
+            while (pointer != null)
             {
                 TextPointerContext context = pointer.GetPointerContext(LogicalDirection.Forward);
                 if (context == TextPointerContext.Text)
                 {
                     string run = pointer.GetTextInRun(LogicalDirection.Forward);
-                    for (int i = 0; i < run.Length && offset < source.Length; i++, offset++)
-                        positions[offset] = pointer.GetPositionAtOffset(i, LogicalDirection.Forward);
+                    if (run.Length >= remaining)
+                        return pointer.GetPositionAtOffset(remaining, LogicalDirection.Forward);
+
+                    remaining -= run.Length;
                     pointer = pointer.GetPositionAtOffset(run.Length, LogicalDirection.Forward);
                     continue;
                 }
 
                 if (context == TextPointerContext.ElementEnd && pointer.Parent is Paragraph)
                 {
-                    positions[offset++] = pointer;
-                    if (offset < source.Length) positions[offset++] = pointer;
+                    int paragraphChars = remaining > 1 ? 2 : 1;
+                    if (remaining <= paragraphChars)
+                        return pointer;
+
+                    remaining -= paragraphChars;
                 }
+
                 pointer = pointer.GetNextContextPosition(LogicalDirection.Forward);
             }
-            positions[source.Length] = pointer ?? Document.ContentEnd;
-            return offset == source.Length ? positions : null;
+
+            return Document.ContentEnd;
+        }
+
+        private static int ExpandToLineStart(string source, int index)
+        {
+            if (index <= 0) return 0;
+            int cursor = index;
+            while (cursor > 0)
+            {
+                char ch = source[cursor - 1];
+                if (ch == '\n' || ch == '\r') break;
+                cursor--;
+            }
+            return cursor;
+        }
+
+        private static int ExpandToLineEnd(string source, int index)
+        {
+            if (index >= source.Length) return source.Length;
+            int cursor = index;
+            while (cursor < source.Length)
+            {
+                char ch = source[cursor];
+                cursor++;
+                if (ch == '\n') break;
+            }
+            return cursor;
         }
 
         private static Brush Brush(string color)
@@ -297,12 +428,70 @@ namespace Typify.TextBox
 
         internal static List<HighlightSpan> Tokenize(string source, bool isDarkTheme)
         {
+            return TokenizeRange(source, isDarkTheme, 0, source.Length);
+        }
+
+        internal static List<HighlightSpan> TokenizeRange(string source, bool isDarkTheme, int start, int end)
+        {
             HighlightPalette palette = isDarkTheme ? DarkPalette : LightPalette;
             var spans = new List<HighlightSpan>();
+            if (string.IsNullOrEmpty(source) || end <= start)
+                return spans;
+
+            if (start < 0) start = 0;
+            if (end > source.Length) end = source.Length;
             bool inBlockComment = false;
             bool inRawFence = false;
+
             int lineStart = 0;
-            while (lineStart < source.Length)
+            while (lineStart < start)
+            {
+                int lineEnd = source.IndexOf('\n', lineStart);
+                if (lineEnd < 0) lineEnd = source.Length;
+                int contentEnd = lineEnd > lineStart && source[lineEnd - 1] == '\r' ? lineEnd - 1 : lineEnd;
+                int first = lineStart;
+                while (first < contentEnd && (source[first] == ' ' || source[first] == '\t')) first++;
+                if (StartsWith(source, first, contentEnd, "```")) inRawFence = !inRawFence;
+
+                int i = lineStart;
+                while (i < contentEnd)
+                {
+                    if (inBlockComment)
+                    {
+                        int close = source.IndexOf("*/", i, contentEnd - i, StringComparison.Ordinal);
+                        if (close < 0) { i = contentEnd; }
+                        else { i = close + 2; inBlockComment = false; }
+                        continue;
+                    }
+                    if (source[i] == '"')
+                    {
+                        i = FindStringEnd(source, i, contentEnd, '"');
+                        continue;
+                    }
+                    if (i + 1 < contentEnd && source[i] == '/' && source[i + 1] == '*')
+                    {
+                        int close = source.IndexOf("*/", i + 2, contentEnd - i - 2, StringComparison.Ordinal);
+                        if (close < 0) { inBlockComment = true; i = contentEnd; }
+                        else { i = close + 2; }
+                        continue;
+                    }
+                    if (source[i] == '`')
+                    {
+                        int delimiter = i + 2 < contentEnd && source[i + 1] == '`' && source[i + 2] == '`' ? 3 : 1;
+                        int close = FindSequence(source, new string('`', delimiter), i + delimiter, contentEnd);
+                        i = close < 0 ? contentEnd : close + delimiter;
+                        continue;
+                    }
+                    i++;
+                }
+
+                lineStart = lineEnd < source.Length ? lineEnd + 1 : source.Length;
+            }
+
+            lineStart = start;
+            while (lineStart > 0 && source[lineStart - 1] != '\n') lineStart--;
+
+            while (lineStart < end)
             {
                 int lineEnd = source.IndexOf('\n', lineStart);
                 if (lineEnd < 0) lineEnd = source.Length;
@@ -364,9 +553,9 @@ namespace Typify.TextBox
                         i = close + delimiter;
                         continue;
                     }
-                    if (source[i] == '"' || source[i] == '\'')
+                    if (source[i] == '"')
                     {
-                        int close = FindStringEnd(source, i, contentEnd, source[i]);
+                        int close = FindStringEnd(source, i, contentEnd, '"');
                         Add(spans, i, close, palette.String);
                         i = close;
                         continue;
@@ -390,31 +579,31 @@ namespace Typify.TextBox
                         int identifierStart = i + 1;
                         if (identifierStart < contentEnd && IsIdentifierStart(source[identifierStart]))
                         {
-                            int end = identifierStart + 1;
-                            while (end < contentEnd && IsIdentifierPart(source[end])) end++;
-                            string word = source.Substring(identifierStart, end - identifierStart);
-                            int next = end;
+                            int tokenEnd = identifierStart + 1;
+                            while (tokenEnd < contentEnd && IsIdentifierPart(source[tokenEnd])) tokenEnd++;
+                            string word = source.Substring(identifierStart, tokenEnd - identifierStart);
+                            int next = tokenEnd;
                             while (next < contentEnd && char.IsWhiteSpace(source[next])) next++;
-                            Add(spans, identifierStart, end, Keywords.Contains(word) ? palette.Keyword : (next < contentEnd && source[next] == '(' ? palette.Function : palette.Keyword));
-                            i = end;
+                            Add(spans, identifierStart, tokenEnd, Keywords.Contains(word) ? palette.Keyword : (next < contentEnd && source[next] == '(' ? palette.Function : palette.Keyword));
+                            i = tokenEnd;
                             continue;
                         }
                     }
                     if (char.IsDigit(source[i]))
                     {
-                        int end = i + 1;
-                        while (end < contentEnd && (char.IsDigit(source[end]) || source[end] == '.' || char.IsLetter(source[end]) || source[end] == '%')) end++;
-                        Add(spans, i, end, palette.Number);
-                        i = end;
+                        int tokenEnd = i + 1;
+                        while (tokenEnd < contentEnd && (char.IsDigit(source[tokenEnd]) || source[tokenEnd] == '.' || char.IsLetter(source[tokenEnd]) || source[tokenEnd] == '%')) tokenEnd++;
+                        Add(spans, i, tokenEnd, palette.Number);
+                        i = tokenEnd;
                         continue;
                     }
                     if (source[i] == '@' || (source[i] == '<' && i + 1 < contentEnd && IsIdentifierStart(source[i + 1])))
                     {
-                        int end = i + 1;
-                        while (end < contentEnd && (IsIdentifierPart(source[end]) || source[end] == '-' || source[end] == ':')) end++;
-                        if (source[i] == '<' && end < contentEnd && source[end] == '>') end++;
-                        Add(spans, i, end, palette.Reference);
-                        i = end;
+                        int tokenEnd = i + 1;
+                        while (tokenEnd < contentEnd && (IsIdentifierPart(source[tokenEnd]) || source[tokenEnd] == '-' || source[tokenEnd] == ':')) tokenEnd++;
+                        if (source[i] == '<' && tokenEnd < contentEnd && source[tokenEnd] == '>') tokenEnd++;
+                        Add(spans, i, tokenEnd, palette.Reference);
+                        i = tokenEnd;
                         continue;
                     }
                     if (source[i] == '*' && i + 1 < contentEnd && source[i + 1] == '*')
@@ -425,12 +614,19 @@ namespace Typify.TextBox
                     if (source[i] == '*')
                     {
                         int close = source.IndexOf('*', i + 1, contentEnd - i - 1);
+                        if (close > i + 1) { Add(spans, i, close + 1, palette.Heading, true); i = close + 1; continue; }
+                    }
+                    if (source[i] == '_')
+                    {
+                        int close = source.IndexOf('_', i + 1, contentEnd - i - 1);
                         if (close > i + 1) { Add(spans, i, close + 1, palette.Math, false, true); i = close + 1; continue; }
                     }
                     i++;
                 }
-                lineStart = lineEnd + 1;
+
+                lineStart = lineEnd < source.Length ? lineEnd + 1 : source.Length;
             }
+
             return spans;
         }
 
