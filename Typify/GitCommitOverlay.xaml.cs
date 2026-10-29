@@ -12,8 +12,31 @@ using Gitify.Engine;
 
 namespace Typify
 {
+    public class GitWorkspaceItem
+    {
+        public string Name { get; set; }
+        public string RepositoryRoot { get; set; }
+        public GitRepositoryService Service { get; set; }
+        public string CurrentBranch { get; set; }
+        public int StagedCount { get; set; }
+        public int UnstagedCount { get; set; }
+        public int TotalChanges => StagedCount + UnstagedCount;
+
+        public string BranchSummary => string.IsNullOrEmpty(CurrentBranch) ? string.Empty : "⑂ " + CurrentBranch;
+        public string ChangesSummary => TotalChanges == 0 ? "clean" : TotalChanges + " change" + (TotalChanges == 1 ? "" : "s");
+        public Visibility HasChangesVisibility => TotalChanges > 0 ? Visibility.Visible : Visibility.Collapsed;
+        public string TotalChangesText => TotalChanges.ToString();
+
+        public string DraftSubject { get; set; } = string.Empty;
+        public string DraftBody { get; set; } = string.Empty;
+
+        public override string ToString() => Name;
+    }
+
     public partial class GitCommitOverlay : UserControl
     {
+        private readonly List<GitWorkspaceItem> _workspaces = new List<GitWorkspaceItem>();
+        private GitWorkspaceItem _selectedWorkspace;
         private GitRepositoryService _repository;
         private bool _isDarkTheme;
         private bool _isBusy;
@@ -31,8 +54,11 @@ namespace Typify
         public event EventHandler VisibilityChanged;
         public event EventHandler DockToggleRequested;
         public event EventHandler CloseDockedRequested;
+        public event EventHandler AddFolderRequested;
 
-        public int StagedCount => _stagedItems?.Count ?? 0;
+        public int StagedCount => _workspaces.Count > 0 ? _workspaces.Sum(w => w.StagedCount) : (_stagedItems?.Count ?? 0);
+        public IReadOnlyList<GitWorkspaceItem> Workspaces => _workspaces.AsReadOnly();
+        public GitWorkspaceItem SelectedWorkspace => _selectedWorkspace;
         public bool IsOpen => Visibility == Visibility.Visible;
 
         private bool _isDocked = false;
@@ -67,17 +93,127 @@ namespace Typify
             DockButtonIcon.Text = isDocked ? "↗" : "📌";
         }
 
+        public async Task SetWorkspacesAsync(IEnumerable<string> workspacePaths, bool? isDarkTheme = null)
+        {
+            if (isDarkTheme.HasValue)
+            {
+                _isDarkTheme = isDarkTheme.Value;
+                ApplyTheme(_isDarkTheme);
+            }
+
+            if (workspacePaths == null)
+            {
+                workspacePaths = Enumerable.Empty<string>();
+            }
+
+            var validRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string path in workspacePaths)
+            {
+                if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) continue;
+
+                try
+                {
+                    var probe = new GitRepositoryService(path);
+                    var revResult = await probe.RunAsync("rev-parse", "--show-toplevel");
+                    if (revResult.Succeeded && !string.IsNullOrWhiteSpace(revResult.StandardOutput))
+                    {
+                        string root = Path.GetFullPath(revResult.StandardOutput.Trim().Replace('/', Path.DirectorySeparatorChar));
+                        if (Directory.Exists(root))
+                        {
+                            validRoots.Add(root);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore directories that are not Git repositories
+                }
+            }
+
+            // Sync with existing list to keep drafts and references
+            var updatedList = new List<GitWorkspaceItem>();
+            foreach (string root in validRoots)
+            {
+                var existing = _workspaces.FirstOrDefault(w => string.Equals(w.RepositoryRoot, root, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    updatedList.Add(existing);
+                }
+                else
+                {
+                    string name = Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    if (string.IsNullOrEmpty(name)) name = root;
+
+                    updatedList.Add(new GitWorkspaceItem
+                    {
+                        Name = name,
+                        RepositoryRoot = root,
+                        Service = new GitRepositoryService(root),
+                        CurrentBranch = "main"
+                    });
+                }
+            }
+
+            _workspaces.Clear();
+            _workspaces.AddRange(updatedList);
+
+            if (_workspaces.Count == 0)
+            {
+                _selectedWorkspace = null;
+                _repository = null;
+                _stagedItems.Clear();
+                _unstagedItems.Clear();
+                StagedFilesListBox.ItemsSource = null;
+                UnstagedFilesListBox.ItemsSource = null;
+                RepositoryRow.Visibility = Visibility.Collapsed;
+                NoRepositoriesNotice.Visibility = Visibility.Visible;
+                CommitScrollViewer.Visibility = Visibility.Collapsed;
+                BranchLabel.Text = "No repo";
+                TitleText.Text = "Git Changes";
+                StatusUpdated?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            NoRepositoriesNotice.Visibility = Visibility.Collapsed;
+            CommitScrollViewer.Visibility = Visibility.Visible;
+
+            if (_selectedWorkspace == null || !_workspaces.Any(w => string.Equals(w.RepositoryRoot, _selectedWorkspace.RepositoryRoot, StringComparison.OrdinalIgnoreCase)))
+            {
+                _selectedWorkspace = _workspaces[0];
+            }
+            else
+            {
+                _selectedWorkspace = _workspaces.First(w => string.Equals(w.RepositoryRoot, _selectedWorkspace.RepositoryRoot, StringComparison.OrdinalIgnoreCase));
+            }
+
+            _repository = _selectedWorkspace.Service;
+
+            if (_workspaces.Count > 1)
+            {
+                RepositoryRow.Visibility = Visibility.Visible;
+                TitleText.Text = string.Format("Git Changes - {0} ({1} Repositories)", _selectedWorkspace.Name, _workspaces.Count);
+            }
+            else
+            {
+                RepositoryRow.Visibility = Visibility.Collapsed;
+                TitleText.Text = "Git Changes - " + _selectedWorkspace.Name;
+            }
+
+            RepositoryComboBox.SelectionChanged -= RepositoryComboBox_SelectionChanged;
+            RepositoryComboBox.ItemsSource = null;
+            RepositoryComboBox.ItemsSource = _workspaces;
+            RepositoryComboBox.SelectedItem = _selectedWorkspace;
+            RepositoryComboBox.SelectionChanged += RepositoryComboBox_SelectionChanged;
+
+            await RefreshStatusAsync();
+        }
+
         public async Task InitializeAsync(string repositoryPath, bool isDarkTheme)
         {
             _isDarkTheme = isDarkTheme;
             ApplyTheme(isDarkTheme);
-            if (!string.IsNullOrWhiteSpace(repositoryPath))
-            {
-                _repository = new GitRepositoryService(repositoryPath);
-                string repoName = Path.GetFileName(Path.GetFullPath(repositoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                TitleText.Text = string.IsNullOrEmpty(repoName) ? "Git Changes" : "Git Changes - " + repoName;
-                await RefreshStatusAsync();
-            }
+            var list = string.IsNullOrWhiteSpace(repositoryPath) ? Enumerable.Empty<string>() : new[] { repositoryPath };
+            await SetWorkspacesAsync(list, isDarkTheme);
         }
 
         public void UpdateTheme(bool isDark)
@@ -118,6 +254,9 @@ namespace Typify
             SetThemeBrush("VsStatusAddedBrush", isDark ? "#73C991" : "#2EA043");
             SetThemeBrush("VsStatusDeletedBrush", isDark ? "#C74E39" : "#CF222E");
             SetThemeBrush("VsStatusRenamedBrush", isDark ? "#4EC9B0" : "#0969DA");
+
+            SetThemeBrush("VsBadgeBrush", isDark ? "#3A3D41" : "#E1E1E1");
+            SetThemeBrush("VsBadgeTextBrush", isDark ? "#CCCCCC" : "#333333");
         }
 
         private void SetThemeBrush(string key, string color)
@@ -189,6 +328,13 @@ namespace Typify
                 _stagedItems = staged;
                 _unstagedItems = unstaged;
 
+                if (_selectedWorkspace != null)
+                {
+                    _selectedWorkspace.CurrentBranch = branch;
+                    _selectedWorkspace.StagedCount = _stagedItems.Count;
+                    _selectedWorkspace.UnstagedCount = _unstagedItems.Count;
+                }
+
                 StagedFilesListBox.ItemsSource = _stagedItems;
                 UnstagedFilesListBox.ItemsSource = _unstagedItems;
 
@@ -202,12 +348,72 @@ namespace Typify
 
                 ExecuteCommitButton.Content = _stagedItems.Count > 0 ? "Commit Staged" : "Commit All";
 
+                // Background probe other workspaces to keep badges up to date
+                if (_workspaces.Count > 1)
+                {
+                    var otherWorkspaces = _workspaces.Where(w => w != _selectedWorkspace).ToList();
+                    var probeTasks = otherWorkspaces.Select(async other =>
+                    {
+                        try
+                        {
+                            var oBranchTask = other.Service.RunAsync("symbolic-ref", "--short", "HEAD");
+                            var oStatusTask = other.Service.RunAsync("status", "--porcelain=v1", "-z");
+                            await Task.WhenAll(oBranchTask, oStatusTask);
+                            if (oBranchTask.Result.Succeeded)
+                            {
+                                other.CurrentBranch = oBranchTask.Result.StandardOutput.Trim();
+                            }
+                            var oChanges = GitRepositoryService.ParseStatus(oStatusTask.Result.StandardOutput);
+                            other.StagedCount = oChanges.Count(c => c.IndexStatus != ' ' && c.IndexStatus != '?');
+                            other.UnstagedCount = oChanges.Count(c => c.WorkTreeStatus != ' ' || c.IsUntracked);
+                        }
+                        catch { }
+                    });
+                    await Task.WhenAll(probeTasks);
+                }
+
+                RepositoryComboBox.Items.Refresh();
                 StatusUpdated?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
                 ShowNotification("Error refreshing git: " + ex.Message);
             }
+        }
+
+        private async void RepositoryComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (RepositoryComboBox.SelectedItem is GitWorkspaceItem selected && selected != _selectedWorkspace)
+            {
+                if (_selectedWorkspace != null)
+                {
+                    _selectedWorkspace.DraftSubject = SubjectTextBox.Text ?? string.Empty;
+                    _selectedWorkspace.DraftBody = BodyTextBox.Text ?? string.Empty;
+                }
+
+                _selectedWorkspace = selected;
+                _repository = selected.Service;
+
+                SubjectTextBox.Text = selected.DraftSubject ?? string.Empty;
+                BodyTextBox.Text = selected.DraftBody ?? string.Empty;
+                if (!string.IsNullOrEmpty(selected.DraftBody))
+                {
+                    _isDescriptionOpen = true;
+                    DescriptionToggleIcon.Text = "▾";
+                    BodyTextBox.Visibility = Visibility.Visible;
+                }
+
+                TitleText.Text = _workspaces.Count > 1
+                    ? string.Format("Git Changes - {0} ({1} Repositories)", selected.Name, _workspaces.Count)
+                    : "Git Changes - " + selected.Name;
+
+                await RefreshStatusAsync();
+            }
+        }
+
+        private void AddFolderRootNotice_Click(object sender, RoutedEventArgs e)
+        {
+            AddFolderRequested?.Invoke(this, EventArgs.Empty);
         }
 
         public void ShowAndFocus()
@@ -600,6 +806,11 @@ namespace Typify
                     BodyTextBox.Clear();
                     AmendCheckBox.IsChecked = false;
                     ExecuteCommitButton.Content = "Commit Staged";
+                    if (_selectedWorkspace != null)
+                    {
+                        _selectedWorkspace.DraftSubject = string.Empty;
+                        _selectedWorkspace.DraftBody = string.Empty;
+                    }
 
                     // Fetch short commit hash
                     var revTask = await _repository.RunAsync("rev-parse", "--short", "HEAD");

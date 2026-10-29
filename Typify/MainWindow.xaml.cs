@@ -77,6 +77,8 @@ namespace Typify
             ExplorerOverlay.CloseDockedRequested += ExplorerOverlay_CloseDockedRequested;
             CommitOverlay.DockToggleRequested += CommitOverlay_DockToggleRequested;
             CommitOverlay.CloseDockedRequested += CommitOverlay_CloseDockedRequested;
+            ExplorerOverlay.RootDirectoriesChanged += ExplorerOverlay_RootDirectoriesChanged;
+            CommitOverlay.AddFolderRequested += CommitOverlay_AddFolderRequested;
 
             _isLivePreviewEnabled = Properties.Settings.Default.IsLivePreviewEnabled;
             _enableWordWrap = Properties.Settings.Default.EnableWordWrap;
@@ -383,6 +385,17 @@ namespace Typify
             CommitOverlay.ToggleVisibility();
         }
 
+        private async void ExplorerOverlay_RootDirectoriesChanged(object sender, EventArgs e)
+        {
+            await CommitOverlay.SetWorkspacesAsync(ExplorerOverlay.RootDirectories);
+            UpdateLeftTabState();
+        }
+
+        private void CommitOverlay_AddFolderRequested(object sender, EventArgs e)
+        {
+            ExplorerOverlay.PromptAddRootDirectory();
+        }
+
         private void DockOverlay(UserControl overlay, string title, Action<bool> setDocked)
         {
             setDocked(true);
@@ -477,7 +490,7 @@ namespace Typify
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             ApplyTheme(IsDarkTheme);
-            await CommitOverlay.InitializeAsync(_workingDirectory, IsDarkTheme);
+            await CommitOverlay.SetWorkspacesAsync(ExplorerOverlay.RootDirectories, IsDarkTheme);
             CommitOverlay.CommitCompleted += CommitOverlay_CommitCompleted;
             CommitOverlay.VisibilityChanged += (s, ev) => UpdateLeftTabState();
             CommitOverlay.StatusUpdated += (s, ev) => UpdateLeftTabState();

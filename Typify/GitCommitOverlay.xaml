@@ -1,4 +1,4 @@
-<UserControl x:Class="Typify.GitCommitOverlay"
+﻿<UserControl x:Class="Typify.GitCommitOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -123,6 +123,135 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+
+        <!-- Workspace ComboBox Style -->
+        <Style x:Key="VsComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource VsInputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VsTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource VsInputBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="ComboBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="22" />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Margin="6,0,2,0"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                      IsHitTestVisible="False" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="&#x25BE;"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource VsMutedTextBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               IsHitTestVisible="False" />
+                                </Grid>
+                            </Border>
+                            <!-- PART_ToggleButton is required by WPF ComboBox to handle click-to-open -->
+                            <ToggleButton x:Name="PART_ToggleButton"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                          Focusable="False"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   PopupAnimation="Slide">
+                                <Border Background="{DynamicResource VsSidebarBrush}"
+                                        BorderBrush="{DynamicResource VsBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3"
+                                        Margin="0,2,0,0"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ComboBox}}">
+                                    <ScrollViewer SnapsToDevicePixels="True" MaxHeight="220" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel IsItemsHost="True" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource VsInputFocusBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource VsInputFocusBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ComboBorder" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+                <Style x:Key="VsComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource VsTextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource VsListHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource VsListSelectedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="VsWorkspaceItemTemplate">
+            <Grid Margin="2,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="📁" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" Foreground="{DynamicResource VsPrimaryButtonBrush}" />
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11.5" Foreground="{DynamicResource VsTextBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding BranchSummary}" Margin="6,0,0,0" FontSize="10.5" Foreground="{DynamicResource VsMutedTextBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="{DynamicResource VsBadgeBrush}" CornerRadius="8" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                        Visibility="{Binding HasChangesVisibility}">
+                    <TextBlock Text="{Binding TotalChangesText}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource VsBadgeTextBrush}" />
+                </Border>
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <!-- OVERLAPPING GIT CHANGES WINDOW (Docked on the left, overlapping content) -->
@@ -204,39 +333,56 @@
             <Border Grid.Row="2" Background="{DynamicResource VsSidebarBrush}"
                     BorderBrush="{DynamicResource VsBorderBrush}" BorderThickness="0,0,0,1"
                     Padding="10,6">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <!-- Repository row for multi-workspace selection -->
+                    <Grid x:Name="RepositoryRow" Margin="0,0,0,6" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Repository:" FontSize="11" Foreground="{DynamicResource VsMutedTextBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox x:Name="RepositoryComboBox" Grid.Column="1"
+                                  Style="{StaticResource VsComboBoxStyle}"
+                                  ItemContainerStyle="{StaticResource VsComboBoxItemStyle}"
+                                  ItemTemplate="{StaticResource VsWorkspaceItemTemplate}"
+                                  SelectionChanged="RepositoryComboBox_SelectionChanged" />
+                    </Grid>
 
-                    <!-- Left: Current Branch selector -->
-                    <Border Background="{DynamicResource VsBackgroundBrush}" BorderBrush="{DynamicResource VsBorderBrush}"
-                            BorderThickness="1" CornerRadius="3" Padding="7,3" VerticalAlignment="Center" HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="⑂" FontSize="11.5" Foreground="{DynamicResource VsPrimaryButtonBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
-                            <TextBlock x:Name="BranchLabel" Text="main" FontSize="11.5" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource VsTextBrush}" VerticalAlignment="Center" MaxWidth="160" TextTrimming="CharacterEllipsis" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Current Branch selector -->
+                        <Border Background="{DynamicResource VsBackgroundBrush}" BorderBrush="{DynamicResource VsBorderBrush}"
+                                BorderThickness="1" CornerRadius="3" Padding="7,3" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⑂" FontSize="11.5" Foreground="{DynamicResource VsPrimaryButtonBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="BranchLabel" Text="main" FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource VsTextBrush}" VerticalAlignment="Center" MaxWidth="160" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Right: Pull, Push, Refresh Sync buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource VsIconButton}" ToolTip="Pull from remote (git pull)" Click="PullButton_Click" Margin="0,0,2,0">
+                                <TextBlock Text="↓" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
+                            </Button>
+                            <Button Style="{StaticResource VsIconButton}" ToolTip="Push to remote (git push)" Click="PushButton_Click" Margin="0,0,2,0">
+                                <TextBlock Text="↑" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
+                            </Button>
+                            <Button Style="{StaticResource VsIconButton}" ToolTip="Refresh Git Changes" Click="RefreshButton_Click">
+                                <TextBlock Text="↻" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
+                            </Button>
                         </StackPanel>
-                    </Border>
-
-                    <!-- Right: Pull, Push, Refresh Sync buttons -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource VsIconButton}" ToolTip="Pull from remote (git pull)" Click="PullButton_Click" Margin="0,0,2,0">
-                            <TextBlock Text="↓" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
-                        </Button>
-                        <Button Style="{StaticResource VsIconButton}" ToolTip="Push to remote (git push)" Click="PushButton_Click" Margin="0,0,2,0">
-                            <TextBlock Text="↑" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
-                        </Button>
-                        <Button Style="{StaticResource VsIconButton}" ToolTip="Refresh Git Changes" Click="RefreshButton_Click">
-                            <TextBlock Text="↻" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource VsTextBrush}" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
+                    </Grid>
+                </StackPanel>
             </Border>
 
             <!-- ROW 3: SCROLLABLE MAIN BODY -->
-            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,8">
+            <ScrollViewer x:Name="CommitScrollViewer" Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,8">
                 <StackPanel>
                     <!-- 1. COMMIT MESSAGE BOX (Visual Studio: Enter a message <Required>) -->
                     <Grid Margin="0,0,0,4">
@@ -444,6 +590,17 @@
                     </Border>
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Notice when no Git repositories are found across open workspaces -->
+            <Border x:Name="NoRepositoriesNotice" Grid.Row="3" Padding="20,30" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="⑂" FontSize="32" Foreground="{DynamicResource VsMutedTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                    <TextBlock Text="No Git Repositories Found" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource VsTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                    <TextBlock Text="None of the open workspace folders contain a Git repository. Add a folder to the Explorer to track its changes here."
+                               FontSize="11.5" Foreground="{DynamicResource VsMutedTextBrush}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280" Margin="0,0,0,14" />
+                    <Button Style="{StaticResource VsPrimaryButtonStyle}" Content="Add Folder Root…" HorizontalAlignment="Center" Click="AddFolderRootNotice_Click" Padding="14,5" />
+                </StackPanel>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

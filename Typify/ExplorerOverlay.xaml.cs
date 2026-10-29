@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +28,16 @@ namespace Typify
         private readonly List<string> _rootDirectories = new List<string>();
 
         /// <summary>
+        /// Gets all configured folder roots in the Explorer.
+        /// </summary>
+        public IReadOnlyList<string> RootDirectories => _rootDirectories.AsReadOnly();
+
+        /// <summary>
+        /// Raised whenever folder roots are added, removed, or changed.
+        /// </summary>
+        public event EventHandler RootDirectoriesChanged;
+
+        /// <summary>
         /// Gets the first root for compatibility with callers that expect a single working directory.
         /// Setting this property replaces the configured roots with the specified directory.
         /// </summary>
@@ -44,6 +54,7 @@ namespace Typify
 
                 _workingDirectory = _rootDirectories.Count > 0 ? _rootDirectories[0] : value;
                 UpdateRootView();
+                RootDirectoriesChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -64,7 +75,32 @@ namespace Typify
                 _workingDirectory = fullPath;
 
             UpdateRootView();
+            RootDirectoriesChanged?.Invoke(this, EventArgs.Empty);
             return true;
+        }
+
+        /// <summary>
+        /// Removes an existing directory root from the Explorer.
+        /// </summary>
+        public bool RemoveRootDirectory(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+
+            string fullPath = System.IO.Path.GetFullPath(path);
+            int removed = _rootDirectories.RemoveAll(root => string.Equals(root, fullPath, StringComparison.OrdinalIgnoreCase));
+            if (removed > 0)
+            {
+                if (_workingDirectory != null && string.Equals(_workingDirectory, fullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _workingDirectory = _rootDirectories.Count > 0 ? _rootDirectories[0] : string.Empty;
+                }
+
+                UpdateRootView();
+                RootDirectoriesChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+
+            return false;
         }
 
         private void UpdateRootView()
@@ -92,7 +128,12 @@ namespace Typify
             }
         }
 
-        private void AddRootDirectory_Click(object sender, RoutedEventArgs e)
+        public void PromptAddRootDirectory()
+        {
+            AddRootDirectory_Click(this, new RoutedEventArgs());
+        }
+
+        public void AddRootDirectory_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new NativeFolderDialog
             {
@@ -281,6 +322,13 @@ namespace Typify
 
                 var root = CreateDirectoryNode(rootPath, GetRootDisplayName(rootPath));
                 root.ToolTip = rootPath;
+
+                var contextMenu = new ContextMenu();
+                var removeItem = new MenuItem { Header = "Remove Folder from Workspace" };
+                string targetPath = rootPath;
+                removeItem.Click += (s, ev) => RemoveRootDirectory(targetPath);
+                contextMenu.Items.Add(removeItem);
+                root.ContextMenu = contextMenu;
                 ProjectTree.Items.Add(root);
                 root.IsExpanded = true;
             }
